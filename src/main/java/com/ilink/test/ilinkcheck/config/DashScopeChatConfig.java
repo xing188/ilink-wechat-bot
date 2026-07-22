@@ -1,5 +1,6 @@
 package com.ilink.test.ilinkcheck.config;
 
+import com.ilink.test.ilinkcheck.infrastructure.persistence.file.FileChatMemory;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
 import org.springframework.ai.chat.memory.ChatMemory;
