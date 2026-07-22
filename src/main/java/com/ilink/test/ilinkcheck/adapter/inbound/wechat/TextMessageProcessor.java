@@ -64,7 +64,7 @@ public class TextMessageProcessor {
             wechatMessageGateway.sendReply(iLinkClient, fromUserId, draft);
         }
         catch (Exception e) {
-            log.error("处理文本消息失败。 user={}", fromUserId, e);
+            log.error("处理文本消息失败。user={}", fromUserId, e);
             try {
                 wechatMessageGateway.sendText(iLinkClient, fromUserId, "文本消息处理失败，请稍后再试。");
             }

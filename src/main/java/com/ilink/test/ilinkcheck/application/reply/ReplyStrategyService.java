@@ -52,7 +52,7 @@ public class ReplyStrategyService {
                 return ReplyDraft.file(audioBytes, "reply.mp3", normalized, normalized);
             }
             catch (Exception e) {
-                log.warn("Failed to prepare audio reply. user={}", userId, e);
+                log.warn("准备语音回复失败。 user={}", userId, e);
             }
         }
 
