@@ -7,9 +7,12 @@ import com.ilink.test.ilinkcheck.model.ReplyMode;
 import com.ilink.test.ilinkcheck.service.ConversationService;
 import com.ilink.test.ilinkcheck.service.ImageGenerationService;
 import com.ilink.test.ilinkcheck.service.ReplyService;
+import com.ilink.test.ilinkcheck.service.VoiceSelectionService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
+
+import java.util.Optional;
 
 @Component
 @Slf4j
@@ -19,15 +22,18 @@ public class VoiceMessageProcessor {
     private final ConversationService conversationService;
     private final ReplyService replyService;
     private final ImageGenerationService imageGenerationService;
+    private final VoiceSelectionService voiceSelectionService;
 
     public VoiceMessageProcessor(TypingIndicator typingIndicator,
                                  ConversationService conversationService,
                                  ReplyService replyService,
-                                 ImageGenerationService imageGenerationService) {
+                                 ImageGenerationService imageGenerationService,
+                                 VoiceSelectionService voiceSelectionService) {
         this.typingIndicator = typingIndicator;
         this.conversationService = conversationService;
         this.replyService = replyService;
         this.imageGenerationService = imageGenerationService;
+        this.voiceSelectionService = voiceSelectionService;
     }
 
     public void process(ILinkClient client, String fromUserId, MessageItem item) {
@@ -37,7 +43,6 @@ public class VoiceMessageProcessor {
             return;
         }
 
-        typingIndicator.start(client, fromUserId);
         try {
             String voiceText = voiceItem.getText();
             log.info("Received voice message. hasTranscript={}, durationMs={}",
@@ -48,6 +53,31 @@ public class VoiceMessageProcessor {
                 return;
             }
 
+            Optional<VoiceSelectionService.SelectionReply> selectionReply =
+                    voiceSelectionService.handleInput(fromUserId, voiceText, true);
+            if (selectionReply.isPresent()) {
+                VoiceSelectionService.SelectionReply reply = selectionReply.orElseThrow();
+                replyService.sendTextOrAudioReply(
+                        client,
+                        fromUserId,
+                        reply.text(),
+                        reply.replyMode());
+                return;
+            }
+        }
+        catch (Exception e) {
+            log.error("Failed to handle voice selection command. user={}", fromUserId, e);
+            try {
+                client.sendText(fromUserId, "音色切换失败，请稍后再试。");
+            }
+            catch (Exception ignored) {
+            }
+            return;
+        }
+
+        typingIndicator.start(client, fromUserId);
+        try {
+            String voiceText = item.getVoice_item().getText();
             ConversationResult result = conversationService.handleVoiceTranscript(fromUserId, voiceText);
             if (result.type() == ConversationResult.Type.DRAW_IMAGE) {
                 imageGenerationService.generateAndSend(client, fromUserId, result.content());

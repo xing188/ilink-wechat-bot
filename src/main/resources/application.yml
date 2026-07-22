@@ -12,6 +12,14 @@ spring:
     dashscope:
       api-key: ${ALIYUN_API_KEY:""}
 
+  data:
+    redis:
+      host: 223.109.143.141
+      port: 6379
+      password: tmpxmt*0327
+      database: 0
+
+
 app:
   ilink:
     enabled: true
