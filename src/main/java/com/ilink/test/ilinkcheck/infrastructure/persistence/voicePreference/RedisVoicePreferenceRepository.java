@@ -1,4 +1,4 @@
-package com.ilink.test.ilinkcheck.infrastructure.persistence.redis;
+package com.ilink.test.ilinkcheck.infrastructure.persistence.voicePreference;
 
 import com.ilink.test.ilinkcheck.application.voice.VoicePreferenceRepository;
 import lombok.extern.slf4j.Slf4j;

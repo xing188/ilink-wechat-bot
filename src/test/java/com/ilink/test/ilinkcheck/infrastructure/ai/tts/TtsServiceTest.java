@@ -30,7 +30,7 @@ class TtsServiceTest {
         when(model.call(any(TextToSpeechPrompt.class)))
                 .thenReturn(new TextToSpeechResponse(List.of(new Speech(new byte[]{1, 2, 3}))));
 
-        TtsService service = new TtsService(model, defaultOptions);
+        DashScopeTextToSpeechServiceImpl service = new DashScopeTextToSpeechServiceImpl(model, defaultOptions);
 
         byte[] result = service.synthesizeMp3("你好", "longlaobo_v3");
 

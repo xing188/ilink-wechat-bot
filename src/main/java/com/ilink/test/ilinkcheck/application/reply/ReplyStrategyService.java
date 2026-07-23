@@ -1,8 +1,8 @@
 package com.ilink.test.ilinkcheck.application.reply;
 
+import com.ilink.test.ilinkcheck.application.voice.TextToSpeechService;
 import com.ilink.test.ilinkcheck.model.ReplyMode;
 import com.ilink.test.ilinkcheck.model.VoiceOption;
-import com.ilink.test.ilinkcheck.infrastructure.ai.tts.TtsService;
 import com.ilink.test.ilinkcheck.infrastructure.document.DocumentExportService;
 import com.ilink.test.ilinkcheck.application.voice.VoicePreferenceService;
 import lombok.extern.slf4j.Slf4j;
@@ -16,13 +16,13 @@ public class ReplyStrategyService {
     private static final int LONG_TEXT_THRESHOLD = 800;
 
     private final DocumentExportService documentExportService;
-    private final TtsService ttsService;
+    private final TextToSpeechService textToSpeechService;
     private final VoicePreferenceService voicePreferenceService;
 
-    public ReplyStrategyService(TtsService ttsService,
+    public ReplyStrategyService(TextToSpeechService textToSpeechService,
                                 DocumentExportService documentExportService,
                                 VoicePreferenceService voicePreferenceService) {
-        this.ttsService = ttsService;
+        this.textToSpeechService = textToSpeechService;
         this.documentExportService = documentExportService;
         this.voicePreferenceService = voicePreferenceService;
     }
@@ -48,7 +48,7 @@ public class ReplyStrategyService {
         if (replyMode == ReplyMode.AUDIO_FILE) {
             try {
                 VoiceOption voiceOption = voicePreferenceService.getUserVoiceOption(userId);
-                byte[] audioBytes = ttsService.synthesizeMp3(normalized, voiceOption.getVoiceParam());
+                byte[] audioBytes = textToSpeechService.synthesizeMp3(normalized, voiceOption.getVoiceParam());
                 return ReplyDraft.file(audioBytes, "reply.mp3", normalized, normalized);
             }
             catch (Exception e) {

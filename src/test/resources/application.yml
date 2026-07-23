@@ -1,4 +1,6 @@
 app:
+  reminder:
+    dispatch-interval-ms: 10000
   ilink:
     enabled: false
 spring:
