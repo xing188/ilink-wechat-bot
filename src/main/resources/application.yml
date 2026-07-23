@@ -2,7 +2,7 @@
 spring:
   ai:
     openai:
-      api-key: "sk-ws-H.EHPHHLX.XPoI.MEYCIQDNPm88BJB-3kCmcFpQc5b4hGLpmFFIPU8YwqOko-316AIhAMSXsjdypyIqEEQdZzGgh2JJyWojOL2lcNzUBaeRJp7M"
+      api-key: ${ALIYUN_API_KEY}
       base-url: "https://dashscope.aliyuncs.com/compatible-mode/v1"
       chat:
         model: "qwen3.7-plus"
@@ -10,7 +10,7 @@ spring:
         max-tokens: 4096
 
     dashscope:
-      api-key: "sk-ws-H.EHPHHLX.XPoI.MEYCIQDNPm88BJB-3kCmcFpQc5b4hGLpmFFIPU8YwqOko-316AIhAMSXsjdypyIqEEQdZzGgh2JJyWojOL2lcNzUBaeRJp7M"
+      api-key: ${ALIYUN_API_KEY}
 
   data:
     redis:
@@ -22,7 +22,7 @@ spring:
 
 app:
   tianapi:
-    key: "03cf997651bad61097b2a1b6447e5903"
+    key: ${TIANAPI_KEY:""}
   ilink:
     enabled: true
     poll-interval-ms: 1000
