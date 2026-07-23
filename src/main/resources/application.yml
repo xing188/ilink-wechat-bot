@@ -39,5 +39,12 @@ app:
     voice: "longanyang"
     sample-rate: 24000
     speed: 1.0
+  book:
+    douban-api-key: REPLACE_WITH_DOUBANAPI_KEY
+    # api-type: openlibrary   # 可选，切换为 OpenLibrary（国际 API，国内可能不稳定）
+
 server:
   port: 9090
+
+
+
