@@ -1,0 +1,591 @@
+- generic [ref=e2]:
+  - banner [ref=e3]:
+    - generic [ref=e4]:
+      - generic [ref=e5]:
+        - link "UapiPro UApiPro" [ref=e7] [cursor=pointer]:
+          - /url: /
+          - img "UapiPro" [ref=e9]
+          - generic [ref=e10]: UApiPro
+        - button "Open menu" [ref=e13]
+      - navigation [ref=e19]:
+        - link "API 列表" [ref=e20] [cursor=pointer]:
+          - /url: /docs/api-reference
+        - link "控制台" [ref=e23] [cursor=pointer]:
+          - /url: /console
+        - link "价格" [ref=e26] [cursor=pointer]:
+          - /url: /pricing
+        - link "更新日志" [ref=e29] [cursor=pointer]:
+          - /url: /docs/changelog
+        - link "每日热榜" [ref=e32] [cursor=pointer]:
+          - /url: /hotboard
+        - link "帮助中心" [ref=e35] [cursor=pointer]:
+          - /url: /help
+        - link "在线工具" [ref=e38] [cursor=pointer]:
+          - /url: /tools
+  - generic [ref=e43]:
+    - complementary [ref=e44]:
+      - generic [ref=e45]:
+        - button [ref=e46]:
+          - generic [ref=e50]:
+            - paragraph [ref=e51]: API 文档
+            - paragraph [ref=e52]: 查阅完整的 API 接口参数
+        - navigation
+      - list [ref=e55]:
+        - listitem [ref=e56]:
+          - link "隐私政策和用户协议" [ref=e57] [cursor=pointer]:
+            - /url: /docs/getting-started/privacy-policy
+        - listitem [ref=e64]:
+          - link "公平使用与速率限制" [ref=e65] [cursor=pointer]:
+            - /url: /docs/getting-started/fair-use-and-rate-limiting
+    - main [ref=e72]:
+      - generic [ref=e73]:
+        - article [ref=e74]:
+          - heading [level=1] [ref=e75]: 查询天气
+          - paragraph [ref=e76]: 完全免费的天气查询API接口，无需注册即可调用！支持国内和国际城市，实时获取天气预报数据，支持按城市名称（中英文）或Adcode查询，未传参数时自动IP定位。返回温度、湿度、风向、风力等完整气象信息，可选扩展字段（体感温度、能见度、气压、紫外线、空气质量及污染物分项）、18项生活指数、最多7天天气预报、逐小时预报（24小时）和分钟级降水预报。JSON格式响应，毫秒级响应速度。适用于天气应用、出行规划、智能家居、农业监测等场景。 · 适用于天气预报应用、出行规划工具、智能家居系统、农业气象监测、物流配送调度、户外活动提醒、旅游APP、小程序天气功能等场景 · 查询天气
+          - paragraph [ref=e77]: 免费天气API, 天气查询接口, 实时天气API, 城市天气预报, 气象数据API, 天气预报接口, 城市编码API, 温度查询API, 无需注册天气API, 公共天气接口, 天气API免费调用, 体感温度API, 空气质量指数, 生活指数API, 紫外线指数, 多天天气预报, 7天预报API, 逐小时预报API, 分钟级降水API, 国际城市天气, 空气污染物API
+          - paragraph [ref=e78]:
+            - text: GET
+            - code [ref=e79]: /misc/weather
+            - text: "- 查询天气"
+          - generic [ref=e80]:
+            - paragraph [ref=e81]: 出门前，查一下天气总是个好习惯。这个接口为你提供精准、实时的天气数据，支持国内和国际城市。
+            - paragraph [ref=e82]: 功能概述
+            - paragraph [ref=e83]: 这个接口支持三种查询方式：
+            - paragraph [ref=e84]: "- 可以传 adcode，按行政区编码查询（优先级最高）"
+            - paragraph [ref=e85]: "- 可以传 city，按城市名称查询，支持中文（北京）和英文（Tokyo）"
+            - paragraph [ref=e86]: "- 两个都不传时，按客户端 IP 自动定位查询"
+            - paragraph [ref=e87]: 支持 lang 参数，可选 zh（默认）和 en，城市名翻译覆盖 7000+ 城市。
+            - paragraph [ref=e88]: 可选功能模块
+            - paragraph [ref=e89]: "- extended=true：扩展气象字段（体感温度、能见度、气压、紫外线、空气质量及污染物分项数据）"
+            - paragraph [ref=e90]: "- forecast=true：多天预报（最多7天，会额外返回每天的最高温度、最低温度，以及日出日落、风速等详细数据）"
+            - paragraph [ref=e91]: "- hourly=true：逐小时预报（24小时）"
+            - paragraph [ref=e92]: "- minutely=true：分钟级降水预报（仅国内城市，精确到2分钟）"
+            - paragraph [ref=e93]: "- indices=true：18项生活指数（穿衣、紫外线、洗车、运动、花粉等）"
+            - paragraph [ref=e94]: 天气字段说明
+            - paragraph [ref=e95]: weather 是天气现象文本，不是固定枚举。
+            - paragraph [ref=e96]: 常见值包括：晴、多云、阴、小雨、中雨、大雨、雷阵雨、小雪、中雪、大雪、雨夹雪、雾、霾、沙尘。
+            - paragraph [ref=e97]: 如果你的业务需要稳定的天气分类，建议使用 weathercode 进行映射。完整的天气图标代码请参考天气图标代码表。
+          - navigation [ref=e98]:
+            - list [ref=e99]:
+              - listitem [ref=e100]: 查询参数
+        - generic [ref=e102]:
+          - generic [ref=e103]:
+            - generic [ref=e104]:
+              - generic [ref=e105]: 杂项
+              - generic [ref=e106]:
+                - heading "查询天气" [level=1] [ref=e108]
+                - generic [ref=e109]:
+                  - button "问问 豆包" [ref=e110]:
+                    - generic [ref=e111]: 问问
+                    - img "豆包" [ref=e112]
+                    - generic [ref=e113]: 豆包
+                  - button "更多操作" [ref=e114]
+            - paragraph [ref=e119]: 出门前，查一下天气总是个好习惯。这个接口为你提供精准、实时的天气数据，支持国内和国际城市。
+          - generic [ref=e130]:
+            - heading "功能概述" [level=2] [ref=e131]
+            - paragraph [ref=e132]: 这个接口支持三种查询方式：
+            - list [ref=e133]:
+              - listitem [ref=e134]:
+                - generic [ref=e136]:
+                  - text: 可以传
+                  - code [ref=e137]: adcode
+                  - text: ，按行政区编码查询（优先级最高）
+              - listitem [ref=e138]:
+                - generic [ref=e140]:
+                  - text: 可以传
+                  - code [ref=e141]: city
+                  - text: ，按城市名称查询，支持中文（
+                  - code [ref=e142]: 北京
+                  - text: ）和英文（
+                  - code [ref=e143]: Tokyo
+                  - text: ）
+              - listitem [ref=e144]:
+                - generic [ref=e146]: 两个都不传时，按客户端 IP 自动定位查询
+            - paragraph [ref=e147]:
+              - text: 支持
+              - code [ref=e148]: lang
+              - text: 参数，可选
+              - code [ref=e149]: zh
+              - text: （默认）和
+              - code [ref=e150]: en
+              - text: ，城市名翻译覆盖 7000+ 城市。
+            - heading "可选功能模块" [level=2] [ref=e151]
+            - list [ref=e152]:
+              - listitem [ref=e153]:
+                - generic [ref=e155]:
+                  - code [ref=e156]: extended=true
+                  - text: ：扩展气象字段（体感温度、能见度、气压、紫外线、空气质量及污染物分项数据）
+              - listitem [ref=e157]:
+                - generic [ref=e159]:
+                  - code [ref=e160]: forecast=true
+                  - text: ：多天预报（最多7天，会额外返回每天的最高温度、最低温度，以及日出日落、风速等详细数据）
+              - listitem [ref=e161]:
+                - generic [ref=e163]:
+                  - code [ref=e164]: hourly=true
+                  - text: ：逐小时预报（24小时）
+              - listitem [ref=e165]:
+                - generic [ref=e167]:
+                  - code [ref=e168]: minutely=true
+                  - text: ：分钟级降水预报（仅国内城市，精确到2分钟）
+              - listitem [ref=e169]:
+                - generic [ref=e171]:
+                  - code [ref=e172]: indices=true
+                  - text: ：18项生活指数（穿衣、紫外线、洗车、运动、花粉等）
+            - heading "天气字段说明" [level=2] [ref=e173]
+            - paragraph [ref=e174]:
+              - code [ref=e175]: weather
+              - text: 是天气现象文本，不是固定枚举。
+            - paragraph [ref=e176]: 常见值包括：晴、多云、阴、小雨、中雨、大雨、雷阵雨、小雪、中雪、大雪、雨夹雪、雾、霾、沙尘。
+            - paragraph [ref=e177]:
+              - text: 如果你的业务需要稳定的天气分类，建议使用
+              - code [ref=e178]: weather_code
+              - text: 进行映射。完整的天气图标代码请参考
+              - link "天气图标代码表" [ref=e179] [cursor=pointer]:
+                - /url: "#enum-list"
+              - text: 。
+          - generic [ref=e180]:
+            - heading "查询参数" [level=2] [ref=e181]
+            - table [ref=e183]:
+              - rowgroup [ref=e184]:
+                - row [ref=e185]:
+                  - columnheader "名称" [ref=e186]
+                  - columnheader "类型" [ref=e187]
+                  - columnheader "属性" [ref=e188]
+                  - columnheader "说明" [ref=e189]
+                  - columnheader [ref=e190]
+              - rowgroup [ref=e191]:
+                - row [ref=e192]:
+                  - cell [ref=e193]:
+                    - code [ref=e194]: city
+                  - cell "string" [ref=e195]
+                  - cell "可选" [ref=e196]
+                  - cell [ref=e197]:
+                    - paragraph [ref=e199]:
+                      - text: 城市名称，支持中文（
+                      - code [ref=e200]: 北京
+                      - text: ）和英文（
+                      - code [ref=e201]: Tokyo
+                      - text: ）。可选参数，不传时会尝试 IP 自动定位。
+                  - cell [ref=e202]:
+                    - button "复制到剪贴板" [ref=e203]
+                - row [ref=e212]:
+                  - cell [ref=e213]:
+                    - code [ref=e214]: adcode
+                  - cell "string" [ref=e215]
+                  - cell "可选" [ref=e216]
+                  - cell [ref=e217]:
+                    - paragraph [ref=e219]:
+                      - text: 城市行政区划代码（如
+                      - code [ref=e220]: "110000"
+                      - text: ），优先级高于 city。可选参数，不传时会尝试 IP 自动定位。
+                  - cell [ref=e221]:
+                    - button "复制到剪贴板" [ref=e222]
+                - row [ref=e231]:
+                  - cell [ref=e232]:
+                    - code [ref=e233]: extended
+                  - cell "boolean" [ref=e234]
+                  - cell "可选" [ref=e235]
+                  - cell [ref=e236]:
+                    - paragraph [ref=e238]: 返回扩展气象字段（体感温度、能见度、气压、紫外线、降水量、云量、空气质量指数及污染物分项数据）。
+                  - cell [ref=e239]:
+                    - button "复制到剪贴板" [ref=e240]
+                - row [ref=e249]:
+                  - cell [ref=e250]:
+                    - code [ref=e251]: forecast
+                  - cell "boolean" [ref=e252]
+                  - cell "可选" [ref=e253]
+                  - cell [ref=e254]:
+                    - paragraph [ref=e256]: 返回多天预报数据（最多7天），含每天的最高温度、最低温度、白天夜间天气、风向风力、日出日落等。
+                  - cell [ref=e257]:
+                    - button "复制到剪贴板" [ref=e258]
+                - row [ref=e267]:
+                  - cell [ref=e268]:
+                    - code [ref=e269]: hourly
+                  - cell "boolean" [ref=e270]
+                  - cell "可选" [ref=e271]
+                  - cell [ref=e272]:
+                    - paragraph [ref=e274]: 返回逐小时预报（24小时），含温度、天气、风向风速、湿度、降水概率等。
+                  - cell [ref=e275]:
+                    - button "复制到剪贴板" [ref=e276]
+                - row [ref=e285]:
+                  - cell [ref=e286]:
+                    - code [ref=e287]: minutely
+                  - cell "boolean" [ref=e288]
+                  - cell "可选" [ref=e289]
+                  - cell [ref=e290]:
+                    - paragraph [ref=e292]: 返回分钟级降水预报（仅国内城市），精确到2分钟。
+                  - cell [ref=e293]:
+                    - button "复制到剪贴板" [ref=e294]
+                - row [ref=e303]:
+                  - cell [ref=e304]:
+                    - code [ref=e305]: indices
+                  - cell "boolean" [ref=e306]
+                  - cell "可选" [ref=e307]
+                  - cell [ref=e308]:
+                    - paragraph [ref=e310]: 返回18项生活指数（穿衣、紫外线、洗车、晾晒、空调、感冒、运动、舒适度、出行、钓鱼、过敏、防晒、心情、啤酒、雨伞、交通、空气净化器、花粉）。
+                  - cell [ref=e311]:
+                    - button "复制到剪贴板" [ref=e312]
+                - row [ref=e321]:
+                  - cell [ref=e322]:
+                    - code [ref=e323]: lang
+                  - cell "string" [ref=e324]
+                  - cell "可选" [ref=e325]
+                  - cell [ref=e326]:
+                    - paragraph [ref=e328]:
+                      - text: 返回语言。
+                      - code [ref=e329]: zh
+                      - text: 返回中文（默认），
+                      - code [ref=e330]: en
+                      - text: 返回英文。城市名翻译覆盖 7000+ 城市。生活指数（
+                      - code [ref=e331]: indices
+                      - text: ）目前仅支持中文。
+                  - cell [ref=e332]:
+                    - button "复制到剪贴板" [ref=e333]
+          - generic [ref=e342]:
+            - heading "响应" [level=2] [ref=e343]
+            - generic [ref=e344]:
+              - heading "200 / 请求成功" [level=3] [ref=e345]
+              - paragraph [ref=e347]: 查询成功！返回该地区的实时天气信息。
+              - generic [ref=e351]:
+                - generic [ref=e355]:
+                  - generic [ref=e356]: JSON
+                  - button "复制到剪贴板" [ref=e361]
+                - button "展开更多" [ref=e371]
+            - generic [ref=e376]:
+              - heading "400 / 错误的请求" [level=3] [ref=e377]
+              - paragraph [ref=e379]:
+                - text: 参数无效。常见原因：
+                - code [ref=e380]: adcode
+                - text: 格式非法、
+                - code [ref=e381]: lang
+                - text: 非法（仅支持 zh/en）、参数值类型错误或参数组合无效。
+              - generic [ref=e388]:
+                - generic [ref=e389]: JSON
+                - button "复制到剪贴板" [ref=e394]
+            - generic [ref=e403]:
+              - heading "404 / 未找到" [level=3] [ref=e404]
+              - paragraph [ref=e406]: 城市未找到。
+              - generic [ref=e413]:
+                - generic [ref=e414]: JSON
+                - button "复制到剪贴板" [ref=e419]
+            - generic [ref=e428]:
+              - heading "500 / 服务器内部错误" [level=3] [ref=e429]
+              - paragraph [ref=e431]: 服务器内部错误。
+              - generic [ref=e438]:
+                - generic [ref=e439]: JSON
+                - button "复制到剪贴板" [ref=e444]
+            - generic [ref=e453]:
+              - heading "503 / 服务不可用" [level=3] [ref=e454]
+              - paragraph [ref=e456]: 天气服务暂时不可用。
+              - generic [ref=e463]:
+                - generic [ref=e464]: JSON
+                - button "复制到剪贴板" [ref=e469]
+          - generic [ref=e479]:
+            - generic [ref=e480]:
+              - heading "快速上手" [level=2] [ref=e481]
+              - paragraph [ref=e482]: 选择你的语言查看调用示例
+            - generic [ref=e483]:
+              - generic [ref=e484]: 认证方式：
+              - generic [ref=e485]:
+                - button "免费积分" [ref=e486]
+                - button "API Key" [ref=e487]
+              - button [ref=e488]
+            - generic [ref=e492]:
+              - button "cURL" [ref=e493]
+              - button "TypeScript" [ref=e497]
+              - button "Browser" [ref=e500]
+              - button "Python" [ref=e505]
+              - button "Go" [ref=e508]
+              - button "Java" [ref=e511]
+              - button "PHP" [ref=e514]
+              - button "C#" [ref=e517]
+              - button "C++" [ref=e520]
+              - button "Rust" [ref=e523]
+              - button "Uapi Mcp" [ref=e526]
+            - generic [ref=e531]:
+              - generic [ref=e532]:
+                - heading "cURL 命令" [level=3] [ref=e533]
+                - generic [ref=e534]:
+                  - button "全部参数" [ref=e535]
+                  - button "复制" [ref=e536]
+              - code [ref=e538]:
+                - text: curl
+                - generic [ref=e539]: "'https://uapis.cn/api/v1/misc/weather'"
+          - generic [ref=e541]:
+            - heading "常见问题解答" [level=2] [ref=e543]
+            - generic [ref=e544]:
+              - generic [ref=e545]:
+                - heading "这个天气API是免费的吗？" [level=3] [ref=e549] [cursor=pointer]
+                - paragraph [ref=e554]: 是的，这个API完全免费，无需注册或API密钥，可以直接调用。适合个人和商业项目使用。
+              - generic [ref=e555]:
+                - heading "支持查询哪些城市的天气？" [level=3] [ref=e559] [cursor=pointer]
+                - paragraph [ref=e564]: 支持国内和国际城市。国内覆盖3000+城市（省、市、区县级别），国际城市也广泛支持。可以通过中文或英文城市名称、Adcode查询。
+              - generic [ref=e565]:
+                - heading "不传 city 或 adcode 可以吗？" [level=3] [ref=e569] [cursor=pointer]
+                - paragraph [ref=e574]: 可以。不传参数时会自动根据客户端 IP 定位后查询天气。如果自动定位失败，建议手动传 city 或 adcode。
+              - generic [ref=e575]:
+                - heading "如何获取城市的Adcode？" [level=3] [ref=e579] [cursor=pointer]
+                - paragraph [ref=e584]: Adcode是城市行政区划代码，例如北京市是110000。你可以直接使用城市名称查询，或者搜索'中国行政区划代码'获取Adcode。
+              - generic [ref=e585]:
+                - heading "天气数据多久更新一次？" [level=3] [ref=e589] [cursor=pointer]
+                - paragraph [ref=e594]: 天气数据实时获取，每次调用都会返回最新的气象信息，数据来源于权威气象服务。
+              - generic [ref=e595]:
+                - heading "返回的数据包含哪些信息？" [level=3] [ref=e599] [cursor=pointer]
+                - paragraph [ref=e604]: 基础数据包括：天气现象、温度、湿度、风向、风力、更新时间。通过 extended=true 可获取体感温度、能见度、气压、紫外线、空气质量及污染物分项数据。通过 forecast=true 可获取最多7天天气预报，并返回每天的最高温度、最低温度、日出日落等详细数据。通过 hourly=true 可获取逐小时预报（24小时）。通过 minutely=true 可获取精确到2分钟的分钟级降水预报（仅国内）。通过 indices=true 可获取18项生活指数。
+              - generic [ref=e605]:
+                - heading "逐小时预报和分钟级降水有什么区别？" [level=3] [ref=e609] [cursor=pointer]
+                - paragraph [ref=e614]: 逐小时预报（hourly）返回未来24小时每小时的温度、天气、风向等完整气象数据。分钟级降水（minutely）返回精确到2分钟的降水量和降水类型，适合精确判断短期内是否会下雨。分钟级降水仅国内城市可用。
+              - generic [ref=e615]:
+                - heading "生活指数包含哪些内容？" [level=3] [ref=e619] [cursor=pointer]
+                - paragraph [ref=e624]: 共18项：穿衣、紫外线、洗车、晾晒、空调开启、感冒、运动、舒适度、出行、钓鱼、过敏、防晒、心情、啤酒、雨伞、交通、空气净化器、花粉扩散。每项包含等级、简短描述和详细建议。所有城市均可用，基于当前气象数据实时计算。
+              - generic [ref=e625]:
+                - heading "lang=en 时哪些字段会翻译？" [level=3] [ref=e629] [cursor=pointer]
+                - paragraph [ref=e634]: 城市名、省份、天气描述、风向、风力、星期等文本字段都会自动翻译为英文，城市名翻译覆盖7000+城市。生活指数（indices）目前仅支持中文。
+              - generic [ref=e635]:
+                - heading "为什么有些字段没有返回？" [level=3] [ref=e639] [cursor=pointer]
+                - paragraph [ref=e644]: 部分可选字段取决于数据源覆盖情况。国际城市通常字段更完整，国内城市部分字段可能缺失。extended=false（默认）时不返回任何扩展字段。
+          - generic [ref=e646]:
+            - generic [ref=e647] [cursor=pointer]: 该接口有 6 条相关更新
+            - generic [ref=e656]:
+              - generic [ref=e657]:
+                - generic [ref=e658]:
+                  - time [ref=e659]: 2026-07-03
+                  - generic [ref=e660]: /
+                  - generic [ref=e661]: 产品
+                - generic [ref=e662]:
+                  - link "2026年6月 UAPI Pro 累积更新" [ref=e663] [cursor=pointer]:
+                    - /url: /docs/changelog/2026年6月-uapi-pro-累积更新
+                  - generic [ref=e664]: <Update>
+                - paragraph [ref=e667]: 好久不见。近期我们在接口、控制台及文档方面进行了一系列迭代。这些是核心更新汇总：
+                - generic [ref=e668]:
+                  - button [ref=e670] [cursor=pointer]
+                  - button [ref=e675] [cursor=pointer]
+                  - button [ref=e680] [cursor=pointer]
+                  - button [ref=e685] [cursor=pointer]
+              - generic [ref=e689]:
+                - generic [ref=e690]:
+                  - time [ref=e691]: 2026-03-28
+                  - generic [ref=e692]: /
+                  - generic [ref=e693]: API
+                - generic [ref=e694]:
+                  - link "更多接口免费、天气精度提升、登录系统更新" [ref=e695] [cursor=pointer]:
+                    - /url: /docs/changelog/更多接口免费天气精度提升登录系统更新
+                  - generic [ref=e696]: <Update>
+                - generic [ref=e697]:
+                  - button [ref=e699] [cursor=pointer]
+                  - button [ref=e704] [cursor=pointer]
+                  - button [ref=e709] [cursor=pointer]
+              - generic [ref=e713]:
+                - generic [ref=e714]:
+                  - time [ref=e715]: 2026-02-23
+                  - generic [ref=e716]: /
+                  - generic [ref=e717]: API
+                - generic [ref=e718]:
+                  - link "2026年2月 UAPI Pro 天气请求 API 累积功能更新" [ref=e719] [cursor=pointer]:
+                    - /url: /docs/changelog/2026年2月-uapi-pro-天气请求-api-累积功能更新
+                  - generic [ref=e720]: <Update>
+                - paragraph [ref=e723]:
+                  - link "查询天气" [ref=e724] [cursor=pointer]:
+                    - /url: https://uapis.cn/docs/api-reference/get-misc-weather
+                - generic [ref=e729]:
+                  - button [ref=e731] [cursor=pointer]
+                  - button [ref=e736] [cursor=pointer]
+                  - button [ref=e741] [cursor=pointer]
+                  - button [ref=e746] [cursor=pointer]
+              - generic [ref=e750]:
+                - generic [ref=e751]:
+                  - time [ref=e752]: 2026-02-20
+                  - generic [ref=e753]: /
+                  - generic [ref=e754]: API
+                - generic [ref=e755]:
+                  - link "2026年2月20日 UAPI Pro 查询天气 API 累积功能更新" [ref=e756] [cursor=pointer]:
+                    - /url: /docs/changelog/2026年2月20日-uapi-pro-查询天气-api-累积功能更新
+                  - generic [ref=e757]: <Update>
+                - generic [ref=e759]:
+                  - paragraph [ref=e760]:
+                    - link "查询天气" [ref=e761] [cursor=pointer]:
+                      - /url: https://uapis.cn/docs/api-reference/get-misc-weather
+                  - heading "问题修复" [level=2] [ref=e766]
+                  - list [ref=e767]:
+                    - listitem [ref=e768]:
+                      - paragraph [ref=e771]: 修复了返回值为英文城市名的问题
+                    - listitem [ref=e772]:
+                      - paragraph [ref=e775]: 刷新了天气缓存, 改进了数据源
+                    - listitem [ref=e776]:
+                      - paragraph [ref=e779]: 添加了城市算法使其能够识别首府/省会
+                    - listitem [ref=e780]:
+                      - paragraph [ref=e783]:
+                        - text: 修复了
+                        - code [ref=e784]: province
+                        - text: 因自动定位错误的重定向到其他省份的问题
+              - generic [ref=e785]:
+                - generic [ref=e786]:
+                  - time [ref=e787]: 2026-02-19
+                  - generic [ref=e788]: /
+                  - generic [ref=e789]: API
+                - generic [ref=e790]:
+                  - link "天气查询接口重大升级" [ref=e791] [cursor=pointer]:
+                    - /url: /docs/changelog/天气查询接口重大升级
+                  - generic [ref=e792]: <Update>
+                - generic [ref=e794]:
+                  - paragraph [ref=e795]:
+                    - link "天气查询 API" [ref=e796] [cursor=pointer]:
+                      - /url: /docs/api-reference/get-misc-weather
+                    - text: 完成重大升级，新增多项功能并包含破坏性变更。
+                  - heading "破坏性变更" [level=2] [ref=e801]
+                  - list [ref=e802]:
+                    - listitem [ref=e803]:
+                      - generic [ref=e805]:
+                        - text: 错误响应码调整：移除
+                        - code [ref=e806]: "502"
+                        - text: （
+                        - code [ref=e807]: UPSTREAM_ERROR
+                        - text: /
+                        - code [ref=e808]: IP_LOCATION_FAILED
+                        - text: ），新增
+                        - code [ref=e809]: "503"
+                        - text: （
+                        - code [ref=e810]: SERVICE_UNAVAILABLE
+                        - text: ）；
+                        - code [ref=e811]: "400"
+                        - text: 错误码由
+                        - code [ref=e812]: INVALID_ARGUMENT
+                        - text: 改为
+                        - code [ref=e813]: INVALID_PARAMETER
+                        - text: ，
+                        - code [ref=e814]: "404"
+                        - text: 由
+                        - code [ref=e815]: LOCATION_NOT_FOUND
+                        - text: 改为
+                        - code [ref=e816]: NOT_FOUND
+                  - heading "新增功能" [level=2] [ref=e817]
+                  - list [ref=e818]:
+                    - listitem [ref=e819]:
+                      - generic [ref=e821]:
+                        - text: 新增
+                        - code [ref=e822]: hourly
+                        - text: 参数，支持逐小时预报（24小时），返回温度、天气、风向风速、湿度、降水概率、体感温度、露点、能见度等
+                    - listitem [ref=e823]:
+                      - generic [ref=e825]:
+                        - text: 新增
+                        - code [ref=e826]: minutely
+                        - text: 参数，支持分钟级降水预报（仅国内城市），每5分钟一个数据点，含降水类型（rain/snow）
+                    - listitem [ref=e827]:
+                      - generic [ref=e829]:
+                        - code [ref=e830]: indices
+                        - text: 生活指数从 8 项扩展至 18 项，新增：出行、钓鱼、过敏、防晒、心情、啤酒、雨伞、交通、空气净化器、花粉扩散
+                    - listitem [ref=e831]:
+                      - generic [ref=e833]:
+                        - code [ref=e834]: extended=true
+                        - text: 新增字段：
+                        - code [ref=e835]: aqi_level
+                        - text: （AQI等级1-6）、
+                        - code [ref=e836]: aqi_category
+                        - text: （等级描述）、
+                        - code [ref=e837]: aqi_primary
+                        - text: （主要污染物）、
+                        - code [ref=e838]: air_pollutants
+                        - text: （PM2.5/PM10/O3/NO2/SO2/CO 分项数据）
+                    - listitem [ref=e839]:
+                      - generic [ref=e841]:
+                        - code [ref=e842]: forecast
+                        - text: 预报从最多3天扩展至最多7天，数组新增
+                        - code [ref=e843]: wind_speed_day
+                        - text: （风速）、
+                        - code [ref=e844]: sunrise
+                        - text: （日出）、
+                        - code [ref=e845]: sunset
+                        - text: （日落）
+                    - listitem [ref=e846]:
+                      - generic [ref=e848]:
+                        - code [ref=e849]: city
+                        - text: 参数支持国际城市和英文名称（如
+                        - code [ref=e850]: Tokyo
+                        - text: ）
+                    - listitem [ref=e851]:
+                      - generic [ref=e853]:
+                        - code [ref=e854]: lang=en
+                        - text: 城市名翻译覆盖扩展至 7000+ 城市
+                  - paragraph [ref=e855]: 祝大家新年快乐~
+              - generic [ref=e856]:
+                - generic [ref=e857]:
+                  - time [ref=e858]: 2026-02-14
+                  - generic [ref=e859]: /
+                  - generic [ref=e860]: API
+                - generic [ref=e861]:
+                  - link "天气接口支持自动 IP 定位" [ref=e862] [cursor=pointer]:
+                    - /url: /docs/changelog/天气接口支持自动-ip-定位
+                  - generic [ref=e863]: <Update>
+                - generic [ref=e865]:
+                  - paragraph [ref=e866]:
+                    - link "天气查询 API" [ref=e867] [cursor=pointer]:
+                      - /url: /docs/api-reference/get-misc-weather
+                    - text: 现在支持无参数自动定位。
+                  - paragraph [ref=e872]:
+                    - text: 当未传
+                    - code [ref=e873]: city
+                    - text: 和
+                    - code [ref=e874]: adcode
+                    - text: 时，接口会自动根据客户端 IP 推导位置并查询天气。
+                  - paragraph [ref=e875]:
+                    - text: 如果同时传了手动参数，仍按手动参数优先处理（
+                    - code [ref=e876]: adcode
+                    - text: 优先于
+                    - code [ref=e877]: city
+                    - text: ）。
+                  - paragraph [ref=e878]:
+                    - text: 自动定位失败时会返回
+                    - code [ref=e879]: "502"
+                    - text: ，错误码为
+                    - code [ref=e880]: IP_LOCATION_FAILED
+                    - text: ，并提示手动传
+                    - code [ref=e881]: city
+                    - text: 或
+                    - code [ref=e882]: adcode
+                    - text: 。
+          - generic [ref=e885]:
+            - link "上一篇 转换时间戳 (旧版，推荐使用/convert/unixtime)" [ref=e886] [cursor=pointer]:
+              - /url: /docs/api-reference/get-misc-timestamp
+              - generic [ref=e889]:
+                - generic [ref=e890]: 上一篇
+                - generic [ref=e891]: 转换时间戳 (旧版，推荐使用/convert/unixtime)
+            - link "下一篇 查询世界时间" [ref=e892] [cursor=pointer]:
+              - /url: /docs/api-reference/get-misc-worldtime
+              - generic [ref=e893]:
+                - generic [ref=e894]: 下一篇
+                - generic [ref=e895]: 查询世界时间
+          - generic [ref=e898]:
+            - generic [ref=e899]:
+              - generic [ref=e900]:
+                - link [ref=e901] [cursor=pointer]:
+                  - /url: /
+                  - img "UapiPro" [ref=e903]
+                - link "检查中..." [ref=e905] [cursor=pointer]:
+                  - /url: /status
+              - generic [ref=e907]:
+                - button "赞助我们" [ref=e908] [cursor=pointer]:
+                  - generic [ref=e910]:
+                    - generic [ref=e911]: 赞助我们
+                    - text: 赞助我们
+                - generic [ref=e912]: ·
+                - link "官方Q群" [ref=e913] [cursor=pointer]:
+                  - /url: http://qm.qq.com/cgi-bin/qm/qr?_wv=1027&k=RyHtqOTajBrzw__vo0mE2oSkzb6YatLW&authKey=7EnabJHTWWE3vzH3aNjkNPaSADf13QYHuPqhIQp%2FzW73UfdDom5kffJePCEgfFYS&noverify=0&group_code=1058901083
+            - generic [ref=e914]:
+              - generic [ref=e915]:
+                - button "京ICP备2023016802号-5 | 京B2-20240915 | 京公网安备11011402053690号" [ref=e916]:
+                  - link "京ICP备2023016802号-5" [ref=e917] [cursor=pointer]:
+                    - /url: https://beian.miit.gov.cn/
+                  - generic [ref=e918]: "|"
+                  - link "京B2-20240915" [ref=e919] [cursor=pointer]:
+                    - /url: https://dxzhgl.miit.gov.cn/dxxzsp/xkz/xkzgl/resource/qiyesearch.jsp?num=%E4%BA%ACB2-20240915&type=xuke
+                  - generic [ref=e920]: "|"
+                  - link "京公网安备11011402053690号" [ref=e922] [cursor=pointer]:
+                    - /url: https://beian.mps.gov.cn/#/query/webSearch?code=11011402053690
+                - generic:
+                  - link "UapiPro 是 Axt 超级项目计划的一部分" [ref=e926] [cursor=pointer]:
+                    - /url: https://axtn.net
+                  - generic [ref=e929]: © 2026 Axt Team
+              - paragraph [ref=e931]:
+                - text: Crafted by
+                - link "Shuakami" [ref=e932] [cursor=pointer]:
+                  - /url: https://github.com/shuakami

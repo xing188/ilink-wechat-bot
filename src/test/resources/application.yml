@@ -1,0 +1,7 @@
+app:
+  ilink:
+    enabled: false
+spring:
+  ai:
+    openai:
+      api-key: REPLACE_WITH_OPENAI_API_KEY

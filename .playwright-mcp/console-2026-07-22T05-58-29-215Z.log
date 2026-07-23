@@ -1,0 +1,18 @@
+[    1415ms] [LOG] %c
+__  __            _ ____           
+  / / / /___ _____  (_) __ \_________ 
+ / / / / __ `/ __ \/ / /_/ / ___/ __ \
+/ /_/ / /_/ / /_/ / / ____/ /  / /_/ /
+\____/\__,_/ .___/_/_/   /_/   \____/ 
+          /_/
+
+Code is like poetry.
+
+- Docs https://uapis.cn/docs/introduction
+- Console https://uapis.cn/console
+- Status https://status.uapis.cn/
+- Security https://uapis.cn/security
+ font-family: "Maple Mono", ui-monospace, monospace; white-space: pre; line-height: 1; @ https://uapis.cn/_next/static/chunks/3f5d-_rf8li5u.js:7
+[    1426ms] [LOG] [Auth] Starting authentication initialization... @ https://uapis.cn/_next/static/chunks/32e2vji27xci1.js:0
+[    1426ms] [LOG] [Auth] Initialize session state: {"accessToken":false,"sessionMeta":false,"refreshSessionHint":false,"legacyRefreshToken":false,"authSource":null} @ https://uapis.cn/_next/static/chunks/32e2vji27xci1.js:0
+[    1470ms] [LOG] [Auth] Authentication failed, clearing data @ https://uapis.cn/_next/static/chunks/32e2vji27xci1.js:0
