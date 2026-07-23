@@ -1,4 +1,4 @@
-package com.ilink.test.ilinkcheck.infrastructure.weather;
+package com.ilink.test.ilinkcheck.infrastructure.client.weather;
 
 public class WeatherClientException extends RuntimeException {
 

@@ -37,6 +37,17 @@ public class WechatMessageGateway {
         }
     }
 
+    public boolean sendTextIfPossible(ILinkClient client, String userId, String text) {
+        try {
+            client.sendText(userId, text);
+            return true;
+        }
+        catch (Exception e) {
+            log.error("Failed to send text. user={}", userId, e);
+            return false;
+        }
+    }
+
     public void sendTextWithTyping(ILinkClient client, String userId, String text, long delayMs) {
         try {
             client.sendTextWithTyping(userId, text, delayMs);

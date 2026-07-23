@@ -3,7 +3,7 @@ package com.ilink.test.ilinkcheck.application.reply;
 import com.ilink.test.ilinkcheck.model.ReplyMode;
 import com.ilink.test.ilinkcheck.model.VoiceOption;
 import com.ilink.test.ilinkcheck.application.voice.VoicePreferenceService;
-import com.ilink.test.ilinkcheck.infrastructure.ai.tts.TtsService;
+import com.ilink.test.ilinkcheck.infrastructure.ai.tts.DashScopeTextToSpeechServiceImpl;
 import com.ilink.test.ilinkcheck.infrastructure.document.DocumentExportService;
 import org.junit.jupiter.api.Test;
 
@@ -16,7 +16,7 @@ class ReplyStrategyServiceTest {
 
     @Test
     void shouldBuildAudioReplyDraft() {
-        TtsService ttsService = mock(TtsService.class);
+        DashScopeTextToSpeechServiceImpl ttsService = mock(DashScopeTextToSpeechServiceImpl.class);
         DocumentExportService documentExportService = mock(DocumentExportService.class);
         VoicePreferenceService voicePreferenceService = mock(VoicePreferenceService.class);
         when(voicePreferenceService.getUserVoiceOption("u1")).thenReturn(VoiceOption.OPTION_4);
@@ -35,7 +35,7 @@ class ReplyStrategyServiceTest {
 
     @Test
     void shouldBuildDocxDraftForLongReply() {
-        TtsService ttsService = mock(TtsService.class);
+        DashScopeTextToSpeechServiceImpl ttsService = mock(DashScopeTextToSpeechServiceImpl.class);
         DocumentExportService documentExportService = mock(DocumentExportService.class);
         VoicePreferenceService voicePreferenceService = mock(VoicePreferenceService.class);
         String longReply = "a".repeat(801);

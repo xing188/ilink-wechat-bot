@@ -9,6 +9,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 
+import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -39,6 +40,10 @@ public class WechatBotRuntime {
         pollExecutor.submit(this::startBotLoop);
     }
 
+    public Optional<ILinkClient> currentClient() {
+        return Optional.ofNullable(iLinkClient);
+    }
+
     private void startBotLoop() {
         try {
             log.info("初始化 WeChat bot...");
@@ -64,7 +69,7 @@ public class WechatBotRuntime {
                     .onLogin(new com.github.wechat.ilink.sdk.core.listener.OnLoginListener() {
                         @Override
                         public void onLoginSuccess(LoginContext context) {
-                            log.info("登录成功. botId={}", context.getBotId());
+                            log.info("登录成功。botId={}", context.getBotId());
                         }
 
                         @Override
@@ -80,7 +85,7 @@ public class WechatBotRuntime {
 
                         @Override
                         public void onReconnectStart(int attempt) {
-                            log.info("iLink重连接, attempt={}", attempt);
+                            log.info("iLink重连中, attempt={}", attempt);
                         }
 
                         @Override
