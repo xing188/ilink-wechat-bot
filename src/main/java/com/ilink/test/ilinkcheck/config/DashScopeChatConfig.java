@@ -10,6 +10,7 @@ import org.springframework.ai.openai.api.OpenAiApi;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.web.client.RestTemplate;
 
 @Configuration
 public class DashScopeChatConfig {
@@ -66,13 +67,13 @@ public class DashScopeChatConfig {
         return new FileChatMemory();
     }
 
+    @Bean
+    public RestTemplate restTemplate() {
+        return new RestTemplate();
+    }
+
     private String trimTrailingSlash(String value) {
-        if (value == null) {
-            return null;
-        }
-        if (value.endsWith("/")) {
-            return value.substring(0, value.length() - 1);
-        }
-        return value;
+        if (value == null) return null;
+        return value.endsWith("/") ? value.substring(0, value.length() - 1) : value;
     }
 }
