@@ -1,37 +1,23 @@
 package com.ilink.test.ilinkcheck.application.tool.iplocation;
 
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
+import com.ilink.test.ilinkcheck.infrastructure.client.iplocation.IpApiLocationClient;
+import com.ilink.test.ilinkcheck.infrastructure.client.iplocation.IpLocationClientException;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
-
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
-import java.net.HttpURLConnection;
-import java.net.URL;
-import java.text.SimpleDateFormat;
-import java.util.Date;
 
 /**
  * IP 地址查询服务
  *
- * <p>调用 ip-api.com API 查询 IP 归属地信息。</p>
- *
- * <h3>API 说明：</h3>
- * <ul>
- *   <li>免费，无需注册和 API Key</li>
- *   <li>限制：每分钟最多 45 次请求</li>
- *   <li>支持 HTTP/HTTPS</li>
- * </ul>
- *
- * @author wq
+ * <p>负责参数归一化、错误兜底和结果格式化。</p>
  */
 @Service
 public class IpLocationService {
 
-    private static final String API_BASE = "http://ip-api.com/json/";
-    private static final int CONNECT_TIMEOUT = 5000;
-    private static final int READ_TIMEOUT = 5000;
+    private final IpApiLocationClient ipLocationClient;
+
+    public IpLocationService(IpApiLocationClient ipLocationClient) {
+        this.ipLocationClient = ipLocationClient;
+    }
 
     /**
      * 查询 IP 地址位置信息
@@ -45,22 +31,17 @@ public class IpLocationService {
         String normalizedLang = normalizeLang(lang);
 
         if (!StringUtils.hasText(normalizedIp)) {
-            return new IpLocationReport(
-                    null, "fail", null, null, null, null,
-                    null, null, null, null, null, null, null, null,
-                    "IP 地址不能为空"
-            );
+            return failedReport(null, "IP 地址不能为空");
         }
 
         try {
-            String json = fetchFromApi(normalizedIp, normalizedLang);
-            return parseResponse(json, normalizedIp);
-        } catch (Exception e) {
-            return new IpLocationReport(
-                    normalizedIp, "fail", null, null, null, null,
-                    null, null, null, null, null, null, null, null,
-                    "查询失败: " + e.getMessage()
-            );
+            return ipLocationClient.query(normalizedIp, normalizedLang);
+        }
+        catch (IpLocationClientException e) {
+            return failedReport(normalizedIp, "查询失败: " + e.getMessage());
+        }
+        catch (Exception e) {
+            return failedReport(normalizedIp, "查询失败: " + e.getMessage());
         }
     }
 
@@ -92,83 +73,28 @@ public class IpLocationService {
             sb.append("🕐 时区: ").append(report.timezone()).append("\n");
         }
 
-        // 简单的趣味描述
         appendFunFact(sb, report);
-
         return sb.toString().trim();
     }
 
     private void appendFunFact(StringBuilder sb, IpLocationReport report) {
         if ("8.8.8.8".equals(report.query()) || "8.8.4.4".equals(report.query())) {
             sb.append("\n💡 这是 Google 公共 DNS 服务器！");
-        } else if ("1.1.1.1".equals(report.query()) || "1.0.0.1".equals(report.query())) {
+        }
+        else if ("1.1.1.1".equals(report.query()) || "1.0.0.1".equals(report.query())) {
             sb.append("\n💡 这是 Cloudflare 公共 DNS 服务器！");
-        } else if ("114.114.114.114".equals(report.query())) {
+        }
+        else if ("114.114.114.114".equals(report.query())) {
             sb.append("\n💡 这是 114DNS 公共服务器！");
         }
     }
 
-    private String fetchFromApi(String ipAddress, String lang) throws Exception {
-        String urlStr = String.format("%s%s?lang=%s", API_BASE, ipAddress, lang);
-        URL url = new URL(urlStr);
-
-        HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-        conn.setRequestMethod("GET");
-        conn.setConnectTimeout(CONNECT_TIMEOUT);
-        conn.setReadTimeout(READ_TIMEOUT);
-
-        try (BufferedReader reader = new BufferedReader(
-                new InputStreamReader(conn.getInputStream(), "UTF-8"))) {
-            StringBuilder response = new StringBuilder();
-            String line;
-            while ((line = reader.readLine()) != null) {
-                response.append(line);
-            }
-            return response.toString();
-        } finally {
-            conn.disconnect();
-        }
-    }
-
-    private IpLocationReport parseResponse(String jsonStr, String queryIp) {
-        JsonObject json = JsonParser.parseString(jsonStr).getAsJsonObject();
-
-        String status = json.get("status").getAsString();
-
-        if ("fail".equals(status)) {
-            return new IpLocationReport(
-                    queryIp, status, null, null, null, null,
-                    null, null, null, null, null, null, null, null,
-                    json.has("message") ? json.get("message").getAsString() : "查询失败"
-            );
-        }
-
-        // 成功响应 - 提取所有字段
-        String country = getString(json, "country");
-        String countryCode = getString(json, "countryCode");
-        String region = getString(json, "region");
-        String regionName = getString(json, "regionName");
-        String city = getString(json, "city");
-        String zip = getString(json, "zip");
-        Double lat = getDouble(json, "lat");
-        Double lon = getDouble(json, "lon");
-        String timezone = getString(json, "timezone");
-        String isp = getString(json, "isp");
-        String org = getString(json, "org");
-        String asInfo = getString(json, "as");
-
+    private IpLocationReport failedReport(String queryIp, String message) {
         return new IpLocationReport(
-                queryIp, status, country, countryCode, region, regionName,
-                city, zip, lat, lon, timezone, isp, org, asInfo, null
+                queryIp, "fail", null, null, null, null,
+                null, null, null, null, null, null, null, null,
+                message
         );
-    }
-
-    private String getString(JsonObject json, String key) {
-        return json.has(key) ? json.get(key).getAsString() : null;
-    }
-
-    private Double getDouble(JsonObject json, String key) {
-        return json.has(key) ? json.get(key).getAsDouble() : null;
     }
 
     private String normalize(String text) {
@@ -177,7 +103,7 @@ public class IpLocationService {
 
     private String normalizeLang(String lang) {
         if (!StringUtils.hasText(lang)) {
-            return "zh_CN"; // 默认中文
+            return "zh_CN";
         }
         return "en".equalsIgnoreCase(lang) || "english".equalsIgnoreCase(lang)
                 ? "en" : "zh_CN";
