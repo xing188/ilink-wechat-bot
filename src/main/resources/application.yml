@@ -21,6 +21,8 @@ spring:
 
 
 app:
+  tianapi:
+    key: ${TIANAPI_KEY:""}
   ilink:
     enabled: true
     poll-interval-ms: 1000
