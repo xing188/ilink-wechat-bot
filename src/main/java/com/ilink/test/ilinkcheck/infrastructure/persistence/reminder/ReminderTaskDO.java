@@ -1,54 +1,55 @@
 package com.ilink.test.ilinkcheck.infrastructure.persistence.reminder;
 
-import com.baomidou.mybatisplus.annotation.IdType;
-import com.baomidou.mybatisplus.annotation.TableField;
-import com.baomidou.mybatisplus.annotation.TableId;
-import com.baomidou.mybatisplus.annotation.TableName;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
 import lombok.Data;
-import org.apache.ibatis.type.InstantTypeHandler;
 
 import java.time.Instant;
 
 @Data
-@TableName(value = "reminder_task", autoResultMap = true)
+@Entity
+@Table(name = "reminder_task")
 public class ReminderTaskDO {
 
-    @TableId(value = "id", type = IdType.INPUT)
+    @Id
+    @Column(name = "id", length = 32, nullable = false)
     private String id;
 
-    @TableField("user_id")
+    @Column(name = "user_id", length = 128, nullable = false)
     private String userId;
 
-    @TableField("content")
+    @Column(name = "content", length = 500, nullable = false)
     private String content;
 
-    @TableField("original_request")
+    @Column(name = "original_request", length = 500, nullable = false)
     private String originalRequest;
 
-    @TableField("schedule_label")
+    @Column(name = "schedule_label", length = 100, nullable = false)
     private String scheduleLabel;
 
-    @TableField("recurrence")
+    @Column(name = "recurrence", length = 16, nullable = false)
     private String recurrence;
 
-    @TableField("status")
+    @Column(name = "status", length = 16, nullable = false)
     private String status;
 
-    @TableField("timezone")
+    @Column(name = "timezone", length = 64, nullable = false)
     private String timezone;
 
-    @TableField(value = "next_fire_at", typeHandler = InstantTypeHandler.class)
+    @Column(name = "next_fire_at", nullable = false)
     private Instant nextFireAt;
 
-    @TableField(value = "created_at", typeHandler = InstantTypeHandler.class)
+    @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 
-    @TableField(value = "updated_at", typeHandler = InstantTypeHandler.class)
+    @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
 
-    @TableField(value = "completed_at", typeHandler = InstantTypeHandler.class)
+    @Column(name = "completed_at")
     private Instant completedAt;
 
-    @TableField(value = "last_triggered_at", typeHandler = InstantTypeHandler.class)
+    @Column(name = "last_triggered_at")
     private Instant lastTriggeredAt;
 }

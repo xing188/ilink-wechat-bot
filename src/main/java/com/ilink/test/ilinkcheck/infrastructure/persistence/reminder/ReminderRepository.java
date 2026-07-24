@@ -1,7 +1,5 @@
 package com.ilink.test.ilinkcheck.infrastructure.persistence.reminder;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ilink.test.ilinkcheck.application.reminder.model.ReminderRecord;
 import com.ilink.test.ilinkcheck.application.reminder.model.ReminderRecurrence;
@@ -27,14 +25,14 @@ public class ReminderRepository implements com.ilink.test.ilinkcheck.application
     private static final String REMINDER_USER_DUE_KEY_PREFIX = "reminder:user:due:";
     private static final Duration COMPLETED_TTL = Duration.ofDays(30);
 
-    private final ReminderTaskMapper reminderTaskMapper;
+    private final ReminderTaskJpaRepository reminderTaskJpaRepository;
     private final StringRedisTemplate redisTemplate;
     private final ObjectMapper objectMapper;
 
-    public ReminderRepository(ReminderTaskMapper reminderTaskMapper,
+    public ReminderRepository(ReminderTaskJpaRepository reminderTaskJpaRepository,
                               StringRedisTemplate redisTemplate,
                               ObjectMapper objectMapper) {
-        this.reminderTaskMapper = reminderTaskMapper;
+        this.reminderTaskJpaRepository = reminderTaskJpaRepository;
         this.redisTemplate = redisTemplate;
         this.objectMapper = objectMapper;
     }
@@ -42,14 +40,7 @@ public class ReminderRepository implements com.ilink.test.ilinkcheck.application
     @Override
     public ReminderRecord save(ReminderRecord reminder) {
         ReminderTaskDO task = toDataObject(reminder);
-        ReminderTaskDO existing = reminderTaskMapper.selectById(task.getId());
-        if (existing == null) {
-            reminderTaskMapper.insert(task);
-        }
-        else {
-            reminderTaskMapper.updateById(task);
-        }
-
+        reminderTaskJpaRepository.save(task);
         syncRedis(reminder);
         return reminder;
     }
@@ -65,14 +56,12 @@ public class ReminderRepository implements com.ilink.test.ilinkcheck.application
             return cached;
         }
 
-        ReminderTaskDO task = reminderTaskMapper.selectById(reminderId);
-        if (task == null) {
-            return Optional.empty();
-        }
-
-        ReminderRecord reminder = toRecord(task);
-        syncRedis(reminder);
-        return Optional.of(reminder);
+        return reminderTaskJpaRepository.findById(reminderId)
+                .map(task -> {
+                    ReminderRecord record = toRecord(task);
+                    syncRedis(record);
+                    return record;
+                });
     }
 
     @Override
@@ -86,12 +75,9 @@ public class ReminderRepository implements com.ilink.test.ilinkcheck.application
             return cached;
         }
 
-        LambdaQueryWrapper<ReminderTaskDO> query = Wrappers.<ReminderTaskDO>lambdaQuery()
-                .eq(ReminderTaskDO::getUserId, userId)
-                .eq(ReminderTaskDO::getStatus, ReminderStatus.ACTIVE.name())
-                .orderByAsc(ReminderTaskDO::getNextFireAt);
-
-        List<ReminderRecord> reminders = reminderTaskMapper.selectList(query).stream()
+        List<ReminderRecord> reminders = reminderTaskJpaRepository
+                .findByUserIdAndStatusOrderByNextFireAtAsc(userId, ReminderStatus.ACTIVE.name())
+                .stream()
                 .map(this::toRecord)
                 .toList();
         syncRedis(reminders);
@@ -109,14 +95,11 @@ public class ReminderRepository implements com.ilink.test.ilinkcheck.application
             return cached;
         }
 
-        LambdaQueryWrapper<ReminderTaskDO> query = Wrappers.<ReminderTaskDO>lambdaQuery()
-                .eq(ReminderTaskDO::getStatus, ReminderStatus.ACTIVE.name())
-                .le(ReminderTaskDO::getNextFireAt, now)
-                .orderByAsc(ReminderTaskDO::getNextFireAt)
-                .last("LIMIT " + limit);
-
-        List<ReminderRecord> reminders = reminderTaskMapper.selectList(query).stream()
+        List<ReminderRecord> reminders = reminderTaskJpaRepository
+                .findByStatusAndNextFireAtLessThanEqualOrderByNextFireAtAsc(ReminderStatus.ACTIVE.name(), now)
+                .stream()
                 .map(this::toRecord)
+                .limit(limit)
                 .toList();
         syncRedis(reminders);
         return reminders;
@@ -151,14 +134,12 @@ public class ReminderRepository implements com.ilink.test.ilinkcheck.application
             return reminder;
         }
 
-        ReminderTaskDO task = reminderTaskMapper.selectById(reminderId);
-        if (task == null) {
-            return Optional.empty();
-        }
-
-        ReminderRecord loaded = toRecord(task);
-        syncRedis(loaded);
-        return Optional.of(loaded);
+        return reminderTaskJpaRepository.findById(reminderId)
+                .map(task -> {
+                    ReminderRecord loaded = toRecord(task);
+                    syncRedis(loaded);
+                    return loaded;
+                });
     }
 
     private Optional<ReminderRecord> readFromRedis(String reminderId) {
