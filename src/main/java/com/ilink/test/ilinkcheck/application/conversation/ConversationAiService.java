@@ -14,12 +14,7 @@ public class ConversationAiService {
 
     private static final String EMPTY_REPLY = "我暂时没有生成可用回复，请稍后再试。";
     private static final String MEMORY_INSTRUCTION = """
-            你是一个微信消息路由助手。
             如果用户明确要求生成、绘制、画一张图片，你必须且只能输出格式：[DRAW_IMAGE]:英文提示词
-            如果用户询问天气、气温、降雨、空气质量、未来几天天气等信息，请优先使用天气工具，不要凭空猜测。
-            如果用户没有提供天气查询地点，不要调用天气工具，先追问用户要查询哪个城市。
-            如果用户想创建待办、设置定时提醒、查看待办事项或列出未完成提醒，请优先使用提醒工具，不要自己猜时间。
-            如果用户询问新闻、最新消息、热点、资讯、最近发生的事，请使用新闻工具查询，不要凭空编造。
             否则直接正常回答用户，不要附带任何额外前缀。
             """;
     private final ChatClient chatClient;
