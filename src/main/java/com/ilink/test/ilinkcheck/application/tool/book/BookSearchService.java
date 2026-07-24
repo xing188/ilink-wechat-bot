@@ -1,7 +1,7 @@
 package com.ilink.test.ilinkcheck.application.tool.book;
 
-import com.ilink.test.ilinkcheck.infrastructure.book.client.BookApiClient;
-import com.ilink.test.ilinkcheck.infrastructure.book.client.BookClientException;
+import com.ilink.test.ilinkcheck.infrastructure.client.book.BookApiClient;
+import com.ilink.test.ilinkcheck.infrastructure.client.book.BookClientException;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 

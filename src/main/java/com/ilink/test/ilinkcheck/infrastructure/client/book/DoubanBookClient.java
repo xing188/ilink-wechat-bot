@@ -1,4 +1,4 @@
-package com.ilink.test.ilinkcheck.infrastructure.book.client;
+package com.ilink.test.ilinkcheck.infrastructure.client.book;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;

@@ -1,4 +1,4 @@
-package com.ilink.test.ilinkcheck.infrastructure.news;
+package com.ilink.test.ilinkcheck.infrastructure.client.news;
 
 public class NewsClientException extends RuntimeException {
 

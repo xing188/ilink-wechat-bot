@@ -1,4 +1,4 @@
-package com.ilink.test.ilinkcheck.infrastructure.book.client;
+package com.ilink.test.ilinkcheck.infrastructure.client.book;
 
 import com.ilink.test.ilinkcheck.application.tool.book.BookInfo;
 import org.slf4j.Logger;

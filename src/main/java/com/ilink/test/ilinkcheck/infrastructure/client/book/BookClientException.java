@@ -1,4 +1,4 @@
-package com.ilink.test.ilinkcheck.infrastructure.book.client;
+package com.ilink.test.ilinkcheck.infrastructure.client.book;
 
 /**
  * 图书 API 请求失败异常。
