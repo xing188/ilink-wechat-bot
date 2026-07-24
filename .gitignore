@@ -36,4 +36,7 @@ build/
 # Not for repo
 AGENTS.md
 
+# Runtime session file
+bot-session.json
+
 

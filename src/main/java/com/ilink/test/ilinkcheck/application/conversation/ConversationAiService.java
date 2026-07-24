@@ -1,9 +1,6 @@
 package com.ilink.test.ilinkcheck.application.conversation;
 
 import com.ilink.test.ilinkcheck.application.tool.ToolRegistry;
-import com.ilink.test.ilinkcheck.application.tool.selection.ToolContextAssembler;
-import com.ilink.test.ilinkcheck.application.tool.selection.ToolSelectionResult;
-import com.ilink.test.ilinkcheck.application.tool.selection.ToolSelector;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.memory.ChatMemory;
@@ -15,50 +12,37 @@ import org.springframework.util.StringUtils;
 @Slf4j
 public class ConversationAiService {
 
-    private static final String EMPTY_REPLY = "鎴戞殏鏃舵病鏈夌敓鎴愬彲鐢ㄥ洖澶嶏紝璇风◢鍚庡啀璇曘€?";
-    private static final String GLOBAL_INSTRUCTION = """
-            You are a concise WeChat assistant.
-            If the user explicitly asks to generate or draw an image, you must and can only output in the exact format [DRAW_IMAGE]:<English prompt>.
-            Otherwise answer in Chinese.
-            Do not mention hidden routing logic or internal tool selection.
+    private static final String EMPTY_REPLY = "我暂时没有生成可用回复，请稍后再试。";
+    private static final String MEMORY_INSTRUCTION = """
+            你是一个微信消息路由助手。
+            如果用户明确要求生成、绘制图片，你必须且只能严格输出格式：[DRAW_IMAGE]:英文绘图提示词。
+            其余场景直接使用中文正常回答用户，不要附带任何额外前缀。
+            禁止提及内部工具选择、路由调度等系统内部逻辑。
             """;
-
     private final ChatClient chatClient;
     private final String systemPrompt;
     private final ToolRegistry toolRegistry;
-    private final ToolSelector toolSelector;
-    private final ToolContextAssembler toolContextAssembler;
 
     public ConversationAiService(ChatClient conversationChatClient,
                                  @Value("${app.chat.system-prompt:You are a concise and accurate assistant. Reply in Chinese.}") String systemPrompt,
-                                 ToolRegistry toolRegistry,
-                                 ToolSelector toolSelector,
-                                 ToolContextAssembler toolContextAssembler) {
+                                 ToolRegistry toolRegistry) {
         this.chatClient = conversationChatClient;
         this.systemPrompt = systemPrompt;
         this.toolRegistry = toolRegistry;
-        this.toolSelector = toolSelector;
-        this.toolContextAssembler = toolContextAssembler;
     }
 
     public String generateReply(String conversationId, String text) {
         String normalizedConversationId = normalizeConversationId(conversationId);
         String normalizedText = normalizeText(text);
-        ToolSelectionResult selectionResult = toolSelector.select(normalizedConversationId, normalizedText);
-        Object[] selectedTools = toolRegistry.toolObjects(selectionResult.toolIds());
 
-        log.debug("Tool selection strategy={}, tools={}", selectionResult.strategy(), selectionResult.toolIds());
-
-        ChatClient.ChatClientRequestSpec requestSpec = chatClient.prompt()
+        String aiDecision = chatClient.prompt()
                 .advisors(advisor -> advisor.param(ChatMemory.CONVERSATION_ID, normalizedConversationId))
-                .system(buildSystemPrompt(selectionResult))
-                .user(normalizedText);
+                .tools(toolRegistry.toolObjects())
+                .system(buildSystemPrompt())
+                .user(normalizedText)
+                .call()
+                .content();
 
-        if (selectedTools.length > 0) {
-            requestSpec = requestSpec.tools(selectedTools);
-        }
-
-        String aiDecision = requestSpec.call().content();
         if (!StringUtils.hasText(aiDecision)) {
             return EMPTY_REPLY;
         }
@@ -66,12 +50,8 @@ public class ConversationAiService {
         return aiDecision.trim();
     }
 
-    private String buildSystemPrompt(ToolSelectionResult selectionResult) {
-        return systemPrompt
-                + System.lineSeparator()
-                + GLOBAL_INSTRUCTION
-                + System.lineSeparator()
-                + toolContextAssembler.buildPromptSection(selectionResult.toolIds());
+    private String buildSystemPrompt() {
+        return systemPrompt + System.lineSeparator() + MEMORY_INSTRUCTION;
     }
 
     private String normalizeConversationId(String conversationId) {
