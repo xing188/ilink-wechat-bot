@@ -1,0 +1,5 @@
+app:
+  tianapi:
+    key: ${TIANAPI_KEY:""}
+  book:
+    douban-api-key: REPLACE_WITH_DOUBANAPI_KEY

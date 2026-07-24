@@ -1,33 +1,8 @@
 spring:
-  ai:
-    openai:
-      api-key: ${ALIYUN_API_KEY}
-      base-url: "https://dashscope.aliyuncs.com/compatible-mode/v1"
-      chat:
-        model: "qwen3.7-plus"
-        temperature: 0.7
-        max-tokens: 4096
-    dashscope:
-      api-key: ${ALIYUN_API_KEY}
-
-  data:
-    redis:
-      host: ${REDIS_HOST:127.0.0.1}
-      port: ${REDIS_PORT:6379}
-      database: 0
-
-  datasource:
-    driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://${MYSQL_HOST:127.0.0.1}:${MYSQL_PORT:3306}/ilink_bot?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai
-    username: ${MYSQL_USER:root}
-    password: ${MYSQL_PASSWORD:lwz20060103}
-  jpa:
-    hibernate:
-      ddl-auto: update
+  profiles:
+    include: ai,database,thirdparty
 
 app:
-  tianapi:
-    key: ${TIANAPI_KEY:""}
   ilink:
     enabled: true
     poll-interval-ms: 1000
@@ -36,17 +11,6 @@ app:
     zone: Asia/Shanghai
   chat:
     system-prompt: "You are a concise and accurate assistant. Reply in Chinese."
-  tts:
-    model: "cosyvoice-v3-flash"
-    voice: "longanyang"
-    sample-rate: 24000
-    speed: 1.0
-  book:
-    douban-api-key: REPLACE_WITH_DOUBANAPI_KEY
-    # api-type: openlibrary   # 可选，切换为 OpenLibrary（国际 API，国内可能不稳定）
 
 server:
   port: 9090
-
-
-
