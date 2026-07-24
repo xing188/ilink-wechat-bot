@@ -1,4 +1,4 @@
-package com.ilink.test.ilinkcheck.infrastructure.news;
+package com.ilink.test.ilinkcheck.infrastructure.client.news;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;

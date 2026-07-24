@@ -1,7 +1,7 @@
 package com.ilink.test.ilinkcheck.application.tool.news;
 
-import com.ilink.test.ilinkcheck.infrastructure.news.NewsClientException;
-import com.ilink.test.ilinkcheck.infrastructure.news.TianApiNewsClient;
+import com.ilink.test.ilinkcheck.infrastructure.client.news.NewsClientException;
+import com.ilink.test.ilinkcheck.infrastructure.client.news.TianApiNewsClient;
 import com.ilink.test.ilinkcheck.model.NewsResult;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
