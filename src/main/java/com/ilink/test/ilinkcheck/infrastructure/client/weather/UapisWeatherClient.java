@@ -3,7 +3,7 @@ package com.ilink.test.ilinkcheck.infrastructure.client.weather;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.ilink.test.ilinkcheck.application.tool.weather.WeatherReport;
+import com.ilink.test.ilinkcheck.application.tool.categories.weather.WeatherReport;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;

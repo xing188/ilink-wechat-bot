@@ -1,6 +1,6 @@
 package com.ilink.test.ilinkcheck.infrastructure.client.book;
 
-import com.ilink.test.ilinkcheck.application.tool.book.BookInfo;
+import com.ilink.test.ilinkcheck.application.tool.categories.book.BookInfo;
 import java.util.List;
 import java.util.Optional;
 

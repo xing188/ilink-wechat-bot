@@ -2,7 +2,7 @@ package com.ilink.test.ilinkcheck.infrastructure.client.book;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.ilink.test.ilinkcheck.application.tool.book.BookInfo;
+import com.ilink.test.ilinkcheck.application.tool.categories.book.BookInfo;
 import org.springframework.util.StringUtils;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientResponseException;
