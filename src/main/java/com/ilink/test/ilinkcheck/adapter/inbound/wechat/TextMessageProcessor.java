@@ -45,26 +45,14 @@ public class TextMessageProcessor {
                 return;
             }
 
-            Optional<VoiceSelectionService.SelectionReply> selectionReply =
-                    voiceSelectionService.handleInput(fromUserId, text, false);
-            if (selectionReply.isPresent()) {
-                VoiceSelectionService.SelectionReply reply = selectionReply.orElseThrow();
-                ReplyDraft draft = replyStrategyService.build(fromUserId, reply.text(), reply.replyMode());
-                wechatMessageGateway.sendReply(iLinkClient, fromUserId, draft);
+            if (handleVoiceSelection(iLinkClient, fromUserId, text, false)) {
                 return;
             }
 
             wechatMessageGateway.startTyping(iLinkClient, fromUserId);
             try {
                 ConversationResult result = conversationService.handleTextMessage(fromUserId, text);
-                if (result.type() == ConversationResult.Type.DRAW_IMAGE) {
-                    byte[] imageBytes = imageGenerationTaskService.generate(result.content());
-                    wechatMessageGateway.sendImage(iLinkClient, fromUserId, imageBytes, "wanx.jpg", "图片生成成功。");
-                    return;
-                }
-
-                ReplyDraft draft = replyStrategyService.build(fromUserId, result.content(), ReplyMode.TEXT);
-                wechatMessageGateway.sendReply(iLinkClient, fromUserId, draft);
+                sendConversationResult(iLinkClient, fromUserId, result, ReplyMode.TEXT);
             }
             catch (Exception e) {
                 log.error("处理文本消息失败。user={}", fromUserId, e);
@@ -81,5 +69,28 @@ public class TextMessageProcessor {
         finally {
             ReminderRequestContext.clear();
         }
+    }
+
+    public boolean handleVoiceSelection(ILinkClient client, String fromUserId, String text, boolean preferAudioConfirmation) {
+        Optional<VoiceSelectionService.SelectionReply> selectionReply =
+                voiceSelectionService.handleInput(fromUserId, text, preferAudioConfirmation);
+        if (selectionReply.isPresent()) {
+            VoiceSelectionService.SelectionReply reply = selectionReply.orElseThrow();
+            ReplyDraft draft = replyStrategyService.build(fromUserId, reply.text(), reply.replyMode());
+            wechatMessageGateway.sendReply(client, fromUserId, draft);
+            return true;
+        }
+        return false;
+    }
+
+    public void sendConversationResult(ILinkClient client, String fromUserId, ConversationResult result, ReplyMode replyMode) {
+        if (result.type() == ConversationResult.Type.DRAW_IMAGE) {
+            byte[] imageBytes = imageGenerationTaskService.generate(result.content());
+            wechatMessageGateway.sendImage(client, fromUserId, imageBytes, "wanx.jpg", "图片生成成功。");
+            return;
+        }
+
+        ReplyDraft draft = replyStrategyService.build(fromUserId, result.content(), replyMode);
+        wechatMessageGateway.sendReply(client, fromUserId, draft);
     }
 }
