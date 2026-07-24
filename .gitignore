@@ -32,3 +32,8 @@ build/
 
 ### VS Code ###
 .vscode/
+
+# Not for repo
+AGENTS.md
+
+
