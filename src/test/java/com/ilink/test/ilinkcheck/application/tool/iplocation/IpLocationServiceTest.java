@@ -1,5 +1,7 @@
 package com.ilink.test.ilinkcheck.application.tool.iplocation;
 
+import com.ilink.test.ilinkcheck.application.tool.categories.iplocation.IpLocationReport;
+import com.ilink.test.ilinkcheck.application.tool.categories.iplocation.IpLocationService;
 import com.ilink.test.ilinkcheck.infrastructure.client.iplocation.IpApiLocationClient;
 import com.ilink.test.ilinkcheck.infrastructure.client.iplocation.IpLocationClientException;
 import org.junit.jupiter.api.Test;

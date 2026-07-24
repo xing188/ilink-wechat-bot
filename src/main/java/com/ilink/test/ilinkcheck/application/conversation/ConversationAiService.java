@@ -14,8 +14,10 @@ public class ConversationAiService {
 
     private static final String EMPTY_REPLY = "我暂时没有生成可用回复，请稍后再试。";
     private static final String MEMORY_INSTRUCTION = """
-            如果用户明确要求生成、绘制、画一张图片，你必须且只能输出格式：[DRAW_IMAGE]:英文提示词
-            否则直接正常回答用户，不要附带任何额外前缀。
+            你是一个微信消息路由助手。
+            如果用户明确要求生成、绘制图片，你必须且只能严格输出格式：[DRAW_IMAGE]:英文绘图提示词。
+            其余场景直接使用中文正常回答用户，不要附带任何额外前缀。
+            禁止提及内部工具选择、路由调度等系统内部逻辑。
             """;
     private final ChatClient chatClient;
     private final String systemPrompt;

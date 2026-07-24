@@ -1,7 +1,7 @@
 package com.ilink.test.ilinkcheck.infrastructure.client.iplocation;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.ilink.test.ilinkcheck.application.tool.iplocation.IpLocationReport;
+import com.ilink.test.ilinkcheck.application.tool.categories.iplocation.IpLocationReport;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;

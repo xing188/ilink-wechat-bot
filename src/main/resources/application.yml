@@ -14,3 +14,7 @@ app:
 
 server:
   port: 9090
+
+logging:
+  level:
+    com.ilink.test.ilinkcheck.application.conversation.ConversationAiService: DEBUG
