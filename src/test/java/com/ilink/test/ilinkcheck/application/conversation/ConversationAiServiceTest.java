@@ -1,6 +1,7 @@
 package com.ilink.test.ilinkcheck.application.conversation;
 
 import com.ilink.test.ilinkcheck.application.tool.ToolRegistry;
+import com.ilink.test.ilinkcheck.application.tool.orchestration.ToolOrchestrator;
 import com.ilink.test.ilinkcheck.application.tool.selection.ToolContextAssembler;
 import com.ilink.test.ilinkcheck.application.tool.selection.ToolSelectionResult;
 import com.ilink.test.ilinkcheck.application.tool.selection.ToolSelector;
@@ -31,6 +32,7 @@ class ConversationAiServiceTest {
         ToolRegistry toolRegistry = mock(ToolRegistry.class);
         ToolSelector toolSelector = mock(ToolSelector.class);
         ToolContextAssembler toolContextAssembler = mock(ToolContextAssembler.class);
+        ToolOrchestrator toolOrchestrator = mock(ToolOrchestrator.class);
         Object[] toolObjects = {new Object()};
 
         when(chatClient.prompt()).thenReturn(requestSpec);
@@ -43,6 +45,7 @@ class ConversationAiServiceTest {
         when(toolSelector.select("user-42", "hello")).thenReturn(ToolSelectionResult.selected(List.of("news"), "rule"));
         when(toolRegistry.toolObjects(List.of("news"))).thenReturn(toolObjects);
         when(toolContextAssembler.buildPromptSection(List.of("news"))).thenReturn("news prompt");
+        when(toolOrchestrator.orchestrate(anyString(), anyString(), any(), anyString())).thenReturn(null);
         when(requestSpec.tools(toolObjects)).thenReturn(requestSpec);
         when(requestSpec.system(anyString())).thenReturn(requestSpec);
         when(requestSpec.user(anyString())).thenReturn(requestSpec);
@@ -54,7 +57,8 @@ class ConversationAiServiceTest {
                 "base prompt",
                 toolRegistry,
                 toolSelector,
-                toolContextAssembler
+                toolContextAssembler,
+                toolOrchestrator
         );
 
         String result = service.generateReply("user-42", "hello");
@@ -75,6 +79,7 @@ class ConversationAiServiceTest {
         ToolRegistry toolRegistry = mock(ToolRegistry.class);
         ToolSelector toolSelector = mock(ToolSelector.class);
         ToolContextAssembler toolContextAssembler = mock(ToolContextAssembler.class);
+        ToolOrchestrator toolOrchestrator = mock(ToolOrchestrator.class);
 
         when(chatClient.prompt()).thenReturn(requestSpec);
         when(advisorSpec.param(anyString(), any())).thenReturn(advisorSpec);
@@ -86,6 +91,7 @@ class ConversationAiServiceTest {
         when(toolSelector.select("user-42", "chat only")).thenReturn(ToolSelectionResult.noTools("llm-none"));
         when(toolRegistry.toolObjects(List.of())).thenReturn(new Object[0]);
         when(toolContextAssembler.buildPromptSection(List.of())).thenReturn("no tools");
+        when(toolOrchestrator.orchestrate(anyString(), anyString(), any(), anyString())).thenReturn(null);
         when(requestSpec.system(anyString())).thenReturn(requestSpec);
         when(requestSpec.user(anyString())).thenReturn(requestSpec);
         when(requestSpec.call()).thenReturn(responseSpec);
@@ -96,7 +102,8 @@ class ConversationAiServiceTest {
                 "base prompt",
                 toolRegistry,
                 toolSelector,
-                toolContextAssembler
+                toolContextAssembler,
+                toolOrchestrator
         );
 
         String result = service.generateReply("user-42", "chat only");

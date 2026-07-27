@@ -75,6 +75,10 @@ public class ToolRegistry {
         return toolsById.containsKey(toolId);
     }
 
+    public ChatFunctionTool toolById(String toolId) {
+        return toolsById.get(toolId);
+    }
+
     private ToolMetadata resolveMetadata(ChatFunctionTool tool) {
         ToolMetadata declared = tool.metadata();
         if (declared != null && !"General-purpose tool".equals(declared.summary())) {
