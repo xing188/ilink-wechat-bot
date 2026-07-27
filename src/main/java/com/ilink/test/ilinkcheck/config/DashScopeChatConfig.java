@@ -10,6 +10,7 @@ import org.springframework.ai.openai.api.OpenAiApi;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
 import org.springframework.web.client.RestTemplate;
 
 @Configuration
@@ -56,6 +57,12 @@ public class DashScopeChatConfig {
     }
 
     @Bean
+    public ChatClient routingChatClient(ChatClient.Builder chatClientBuilder) {
+        return chatClientBuilder.clone().build();
+    }
+
+    @Bean
+    @Primary
     public ChatClient conversationChatClient(ChatClient.Builder chatClientBuilder, ChatMemory chatMemory) {
         return chatClientBuilder.clone()
                 .defaultAdvisors(MessageChatMemoryAdvisor.builder(chatMemory).build())

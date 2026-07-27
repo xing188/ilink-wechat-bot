@@ -3,6 +3,7 @@ package com.ilink.test.ilinkcheck.application.tool.selection;
 import com.ilink.test.ilinkcheck.application.tool.ToolMetadata;
 import com.ilink.test.ilinkcheck.application.tool.ToolRegistry;
 import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
@@ -19,8 +20,9 @@ public class LlmToolSelector {
     private final ChatClient chatClient;
     private final ToolRegistry toolRegistry;
 
-    public LlmToolSelector(ChatClient conversationChatClient, ToolRegistry toolRegistry) {
-        this.chatClient = conversationChatClient;
+    public LlmToolSelector(@Qualifier("routingChatClient") ChatClient routingChatClient,
+                           ToolRegistry toolRegistry) {
+        this.chatClient = routingChatClient;
         this.toolRegistry = toolRegistry;
     }
 
