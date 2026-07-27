@@ -36,6 +36,9 @@ build/
 # Not for repo
 AGENTS.md
 
+# SQLite database
+*.db
+
 # Runtime session file
 bot-session.json
 
