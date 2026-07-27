@@ -3,6 +3,7 @@ package com.ilink.test.ilinkcheck.application.tool.categories.reminder;
 import com.ilink.test.ilinkcheck.application.reminder.ReminderService;
 import com.ilink.test.ilinkcheck.application.reminder.context.ReminderRequestContext;
 import com.ilink.test.ilinkcheck.application.tool.ChatFunctionTool;
+import com.ilink.test.ilinkcheck.application.tool.orchestration.ToolExecutionPolicy;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.annotation.ToolParam;
 import org.springframework.stereotype.Component;
@@ -24,6 +25,7 @@ public class ReminderTool implements ChatFunctionTool {
                     传入用户原始表述即可，工具会自动解析时间和待办内容。
                     """
     )
+    @ToolExecutionPolicy(readOnly = false)
     public String createReminder(
             @ToolParam(required = true, description = "用户原始提醒语句，例如“今天下午5点给张三发微信”")
             String request) {

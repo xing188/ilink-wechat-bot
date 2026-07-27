@@ -1,6 +1,8 @@
 package com.ilink.test.ilinkcheck.application.conversation;
 
 import com.ilink.test.ilinkcheck.application.tool.ToolRegistry;
+import com.ilink.test.ilinkcheck.application.tool.orchestration.ToolOrchestrationResult;
+import com.ilink.test.ilinkcheck.application.tool.orchestration.ToolOrchestrator;
 import com.ilink.test.ilinkcheck.application.tool.selection.ToolContextAssembler;
 import com.ilink.test.ilinkcheck.application.tool.selection.ToolSelectionResult;
 import com.ilink.test.ilinkcheck.application.tool.selection.ToolSelector;
@@ -28,17 +30,20 @@ public class ConversationAiService {
     private final ToolRegistry toolRegistry;
     private final ToolSelector toolSelector;
     private final ToolContextAssembler toolContextAssembler;
+    private final ToolOrchestrator toolOrchestrator;
 
     public ConversationAiService(ChatClient conversationChatClient,
                                  @Value("${app.chat.system-prompt:You are a concise and accurate assistant. Reply in Chinese.}") String systemPrompt,
                                  ToolRegistry toolRegistry,
                                  ToolSelector toolSelector,
-                                 ToolContextAssembler toolContextAssembler) {
+                                 ToolContextAssembler toolContextAssembler,
+                                 ToolOrchestrator toolOrchestrator) {
         this.chatClient = conversationChatClient;
         this.systemPrompt = systemPrompt;
         this.toolRegistry = toolRegistry;
         this.toolSelector = toolSelector;
         this.toolContextAssembler = toolContextAssembler;
+        this.toolOrchestrator = toolOrchestrator;
     }
 
     public String generateReply(String conversationId, String text) {
@@ -51,6 +56,24 @@ public class ConversationAiService {
 
         log.info("conversationId={}, toolSelectionStrategy={}, selectedTools={}",
                 normalizedConversationId, selection.strategy(), selection.toolIds());
+
+        ToolOrchestrationResult orchestrationResult = toolOrchestrator.orchestrate(
+                normalizedConversationId,
+                normalizedText,
+                selection.toolIds(),
+                buildSystemPrompt(toolPromptSection)
+        );
+        if (orchestrationResult != null && StringUtils.hasText(orchestrationResult.finalReply())) {
+            log.info("conversationId={}, plannerNote={}, parallelUsed={}, executedSteps={}",
+                    normalizedConversationId,
+                    orchestrationResult.plan().plannerNote(),
+                    orchestrationResult.usedParallelExecution(),
+                    orchestrationResult.outcomes().stream().map(outcome -> outcome.step().toolName()).toList());
+            return orchestrationResult.finalReply();
+        }
+
+        log.info("conversationId={}, orchestrationFallback=direct-tool-calling, selectedTools={}",
+                normalizedConversationId, selection.toolIds());
 
         ChatClient.ChatClientRequestSpec requestSpec = chatClient.prompt()
                 .advisors(advisor -> advisor.param(ChatMemory.CONVERSATION_ID, normalizedConversationId));

@@ -1,6 +1,7 @@
 package com.ilink.test.ilinkcheck.application.tool.categories.expense;
 
 import com.ilink.test.ilinkcheck.application.tool.ChatFunctionTool;
+import com.ilink.test.ilinkcheck.application.tool.orchestration.ToolExecutionPolicy;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.annotation.ToolParam;
 import org.springframework.stereotype.Component;
@@ -22,6 +23,7 @@ public class ExpenseTool implements ChatFunctionTool {
 
     @Tool(name = "addExpense", description = "记录一笔支出，包含金额、类别和说明。类别可自由填写，如餐饮、交通、购物、娱乐等。")
     @Transactional
+    @ToolExecutionPolicy(readOnly = false)
     public String addExpense(
             @ToolParam(required = true, description = "支出金额，如 29.9、100、15.5")
             BigDecimal amount,
