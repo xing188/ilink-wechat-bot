@@ -1,5 +1,6 @@
 package com.ilink.test.ilinkcheck.application.reminder.parser;
 
+import com.ilink.test.ilinkcheck.application.reminder.model.ReminderAction;
 import com.ilink.test.ilinkcheck.application.reminder.model.ReminderRaw;
 import com.ilink.test.ilinkcheck.application.reminder.model.ReminderRecurrence;
 import org.springframework.stereotype.Service;
@@ -61,6 +62,13 @@ public class ReminderParser {
         throw new ReminderParseException("没看懂时间，请说“十分钟后”“今天下午5点”或“每天早上8点”");
     }
 
+    private ReminderAction resolveAction(String content) {
+        if (content.contains("新闻") || content.contains("热点") || content.contains("资讯")) {
+            return ReminderAction.FETCH_NEWS;
+        }
+        return ReminderAction.NONE;
+    }
+
     private ReminderRaw parseDaily(String request, ZonedDateTime now) {
         String body = request.replaceFirst("^每天\\s*", "").replaceFirst("^每日\\s*", "");
         Matcher matcher = ABSOLUTE_PATTERN.matcher(body);
@@ -87,7 +95,8 @@ public class ReminderParser {
                 "每天 " + candidate.format(HOUR_MINUTE),
                 ReminderRecurrence.DAILY,
                 candidate.toInstant(),
-                null
+                null,
+                resolveAction(content)
         );
     }
 
@@ -110,7 +119,8 @@ public class ReminderParser {
                 label,
                 ReminderRecurrence.CRON,
                 Instant.now(),
-                cronExpression
+                cronExpression,
+                resolveAction(content)
         );
     }
 
@@ -126,7 +136,8 @@ public class ReminderParser {
                 formatRelativeLabel(minutesToAdd),
                 ReminderRecurrence.ONCE,
                 nextFireAt,
-                null
+                null,
+                resolveAction(content)
         );
     }
 
@@ -153,7 +164,8 @@ public class ReminderParser {
                 formatAbsoluteLabel(matcher.group("day"), candidate),
                 ReminderRecurrence.ONCE,
                 candidate.toInstant(),
-                null
+                null,
+                resolveAction(content)
         );
     }
 

@@ -11,6 +11,7 @@ public record ReminderRecord(
         String originalRequest,        // 用户原始自然语言指令
         String scheduleLabel,          // 提醒标题/标签
         ReminderRecurrence recurrence, // 重复规则枚举：一次性/每天/CRON
+        ReminderAction action,         // 触发动作：NONE/FETCH_NEWS
         ReminderStatus status,         // 状态枚举：ACTIVE / COMPLETED / CANCEL
         String timezone,               // 时区
         Instant nextFireAt,            // 下一次触发时间

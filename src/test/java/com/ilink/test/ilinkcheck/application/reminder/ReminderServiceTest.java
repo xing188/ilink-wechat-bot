@@ -1,5 +1,6 @@
 package com.ilink.test.ilinkcheck.application.reminder;
 
+import com.ilink.test.ilinkcheck.application.reminder.model.ReminderAction;
 import com.ilink.test.ilinkcheck.application.reminder.model.ReminderRecord;
 import com.ilink.test.ilinkcheck.application.reminder.model.ReminderRecurrence;
 import com.ilink.test.ilinkcheck.application.reminder.model.ReminderStatus;
@@ -58,6 +59,7 @@ class ReminderServiceTest {
                 "每天早上8点自动给我推送科技新闻",
                 "每天 08:00",
                 ReminderRecurrence.DAILY,
+                ReminderAction.NONE,
                 ReminderStatus.ACTIVE,
                 zoneId.getId(),
                 instant(2026, 7, 23, 8, 0),
@@ -85,6 +87,7 @@ class ReminderServiceTest {
                 "十分钟后开会",
                 "10分钟后",
                 ReminderRecurrence.ONCE,
+                ReminderAction.NONE,
                 ReminderStatus.ACTIVE,
                 zoneId.getId(),
                 instant(2026, 7, 23, 11, 10),
