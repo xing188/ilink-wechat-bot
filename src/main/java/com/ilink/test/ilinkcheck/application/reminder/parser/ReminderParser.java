@@ -1,5 +1,6 @@
 package com.ilink.test.ilinkcheck.application.reminder.parser;
 
+import com.ilink.test.ilinkcheck.application.reminder.model.ReminderAction;
 import com.ilink.test.ilinkcheck.application.reminder.model.ReminderRaw;
 import com.ilink.test.ilinkcheck.application.reminder.model.ReminderRecurrence;
 import org.springframework.stereotype.Service;
@@ -18,6 +19,9 @@ import java.util.regex.Pattern;
 @Service
 public class ReminderParser {
 
+    private static final Pattern CRON_PATTERN = Pattern.compile(
+            "每\\s*(?<value>[0-9零〇一二两三四五六七八九十]*)\\s*(?<unit>秒|分钟|分|小时|时|天)\\s*"
+    );
     private static final Pattern RELATIVE_PATTERN = Pattern.compile(
             "(?<value>[0-9零〇一二两三四五六七八九十]+)\\s*(?<unit>分钟|分|小时|天)\\s*(?:后|之后)"
     );
@@ -40,6 +44,11 @@ public class ReminderParser {
             return parseDaily(normalized, now);
         }
 
+        Matcher cronMatcher = CRON_PATTERN.matcher(normalized);
+        if (normalized.startsWith("每") && cronMatcher.find()) {
+            return parseCron(normalized, cronMatcher);
+        }
+
         Matcher relative = RELATIVE_PATTERN.matcher(normalized);
         if (relative.find()) {
             return parseRelative(normalized, relative, now);
@@ -51,6 +60,13 @@ public class ReminderParser {
         }
 
         throw new ReminderParseException("没看懂时间，请说“十分钟后”“今天下午5点”或“每天早上8点”");
+    }
+
+    private ReminderAction resolveAction(String content) {
+        if (content.contains("新闻") || content.contains("热点") || content.contains("资讯")) {
+            return ReminderAction.FETCH_NEWS;
+        }
+        return ReminderAction.NONE;
     }
 
     private ReminderRaw parseDaily(String request, ZonedDateTime now) {
@@ -78,7 +94,33 @@ public class ReminderParser {
                 content,
                 "每天 " + candidate.format(HOUR_MINUTE),
                 ReminderRecurrence.DAILY,
-                candidate.toInstant()
+                candidate.toInstant(),
+                null,
+                resolveAction(content)
+        );
+    }
+
+    private ReminderRaw parseCron(String request, Matcher matcher) {
+        String valueStr = matcher.group("value");
+        String unit = matcher.group("unit");
+
+        int value = parseCronValue(valueStr);
+
+        String cronExpression = buildCronExpression(value, unit);
+        String label = buildCronLabel(value, unit);
+
+        String content = cleanupContent(removeMatchedSegment(request, matcher));
+        if (!StringUtils.hasText(content)) {
+            throw new ReminderParseException("请补充提醒内容，例如“每5分钟提醒我喝水”");
+        }
+
+        return new ReminderRaw(
+                content,
+                label,
+                ReminderRecurrence.CRON,
+                Instant.now(),
+                cronExpression,
+                resolveAction(content)
         );
     }
 
@@ -93,7 +135,9 @@ public class ReminderParser {
                 content,
                 formatRelativeLabel(minutesToAdd),
                 ReminderRecurrence.ONCE,
-                nextFireAt
+                nextFireAt,
+                null,
+                resolveAction(content)
         );
     }
 
@@ -119,7 +163,9 @@ public class ReminderParser {
                 content,
                 formatAbsoluteLabel(matcher.group("day"), candidate),
                 ReminderRecurrence.ONCE,
-                candidate.toInstant()
+                candidate.toInstant(),
+                null,
+                resolveAction(content)
         );
     }
 
@@ -263,6 +309,27 @@ public class ReminderParser {
             case "九" -> 9;
             default -> throw new ReminderParseException("暂时只支持 0-99 的中文数字");
         };
+    }
+
+    private int parseCronValue(String valueStr) {
+        if (!StringUtils.hasText(valueStr)) {
+            return 1;
+        }
+        return (int) parseNumber(valueStr);
+    }
+
+    private String buildCronExpression(int value, String unit) {
+        return switch (unit) {
+            case "秒" -> "0/" + value + " * * * * ?";
+            case "分钟", "分" -> "0 */" + value + " * * * ?";
+            case "小时", "时" -> "0 0 */" + value + " * * ?";
+            case "天" -> "0 0 0 */" + value + " * ?";
+            default -> throw new ReminderParseException("不支持的间隔单位：" + unit);
+        };
+    }
+
+    private String buildCronLabel(int value, String unit) {
+        return "每" + value + unit;
     }
 
     private record ParsedTime(int hour, int minute) {

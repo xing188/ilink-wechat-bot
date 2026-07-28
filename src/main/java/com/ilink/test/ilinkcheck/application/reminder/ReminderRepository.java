@@ -15,4 +15,6 @@ public interface ReminderRepository {
     List<ReminderRecord> findPendingByUser(String userId);
 
     List<ReminderRecord> findDueReminders(Instant now, int limit);
+
+    List<ReminderRecord> findAllActive();
 }

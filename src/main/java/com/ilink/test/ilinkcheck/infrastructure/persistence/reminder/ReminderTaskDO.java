@@ -35,11 +35,17 @@ public class ReminderTaskDO {
     @Column(name = "status", length = 16, nullable = false)
     private String status;
 
+    @Column(name = "action", length = 20)
+    private String action;
+
     @Column(name = "timezone", length = 64, nullable = false)
     private String timezone;
 
     @Column(name = "next_fire_at", nullable = false)
     private Instant nextFireAt;
+
+    @Column(name = "cron_expression", length = 100)
+    private String cronExpression;
 
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
