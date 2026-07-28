@@ -1,16 +1,14 @@
 spring:
   data:
     redis:
-      host: ${REDIS_HOST:}
+      host: ${REDIS_HOST:127.0.0.1}
       port: ${REDIS_PORT:6379}
-      password: ${REDIS_PASSWORD:}
       database: 0
 
   datasource:
-    driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://${MYSQL_HOST:}:${MYSQL_PORT:3306}/ilink_clawbot?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai
-    username: ${MYSQL_USER:root}
-    password: ${MYSQL_PASSWORD:}
+    url: jdbc:sqlite:ilink_bot.db
+    driver-class-name: org.sqlite.JDBC
   jpa:
+    database-platform: org.hibernate.community.dialect.SQLiteDialect
     hibernate:
       ddl-auto: update
