@@ -10,4 +10,6 @@ public interface ReminderTaskJpaRepository extends JpaRepository<ReminderTaskDO,
     List<ReminderTaskDO> findByUserIdAndStatusOrderByNextFireAtAsc(String userId, String status);
 
     List<ReminderTaskDO> findByStatusAndNextFireAtLessThanEqualOrderByNextFireAtAsc(String status, Instant now);
+
+    List<ReminderTaskDO> findByStatusOrderByNextFireAtAsc(String status);
 }

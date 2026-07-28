@@ -4,6 +4,7 @@ import com.ilink.test.ilinkcheck.application.reminder.model.ReminderRecord;
 import com.ilink.test.ilinkcheck.application.reminder.model.ReminderRecurrence;
 import com.ilink.test.ilinkcheck.application.reminder.model.ReminderStatus;
 import com.ilink.test.ilinkcheck.application.reminder.parser.ReminderParser;
+import com.ilink.test.ilinkcheck.infrastructure.scheduler.ReminderScheduler;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
@@ -28,7 +29,8 @@ class ReminderServiceTest {
         ReminderRepository repository = mock(ReminderRepository.class);
         when(repository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
-        ReminderService service = new ReminderService(repository, new ReminderParser(), fixedClock(2026, 7, 23, 11, 0));
+        ReminderService service = new ReminderService(repository, new ReminderParser(),
+                mock(ReminderScheduler.class), fixedClock(2026, 7, 23, 11, 0));
 
         String result = service.createReminder("user-1", "今天下午5点给张三发个微信消息");
 
@@ -47,7 +49,8 @@ class ReminderServiceTest {
         ReminderRepository repository = mock(ReminderRepository.class);
         when(repository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
-        ReminderService service = new ReminderService(repository, new ReminderParser(), fixedClock(2026, 7, 23, 7, 0));
+        ReminderService service = new ReminderService(repository, new ReminderParser(),
+                mock(ReminderScheduler.class), fixedClock(2026, 7, 23, 7, 0));
         ReminderRecord reminder = new ReminderRecord(
                 "id-1",
                 "user-1",
@@ -58,6 +61,7 @@ class ReminderServiceTest {
                 ReminderStatus.ACTIVE,
                 zoneId.getId(),
                 instant(2026, 7, 23, 8, 0),
+                null,
                 instant(2026, 7, 23, 7, 0),
                 instant(2026, 7, 23, 7, 0),
                 null,
@@ -84,6 +88,7 @@ class ReminderServiceTest {
                 ReminderStatus.ACTIVE,
                 zoneId.getId(),
                 instant(2026, 7, 23, 11, 10),
+                null,
                 instant(2026, 7, 23, 11, 0),
                 instant(2026, 7, 23, 11, 0),
                 null,
@@ -91,7 +96,8 @@ class ReminderServiceTest {
         );
         when(repository.findPendingByUser("user-1")).thenReturn(List.of(reminder));
 
-        ReminderService service = new ReminderService(repository, new ReminderParser(), fixedClock(2026, 7, 23, 11, 0));
+        ReminderService service = new ReminderService(repository, new ReminderParser(),
+                mock(ReminderScheduler.class), fixedClock(2026, 7, 23, 11, 0));
 
         String result = service.listPendingReminders("user-1");
 

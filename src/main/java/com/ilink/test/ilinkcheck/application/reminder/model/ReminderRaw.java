@@ -6,6 +6,7 @@ public record ReminderRaw(
         String content,
         String scheduleLabel,
         ReminderRecurrence recurrence,
-        Instant nextFireAt
+        Instant nextFireAt,
+        String cronExpression
 ) {
 }

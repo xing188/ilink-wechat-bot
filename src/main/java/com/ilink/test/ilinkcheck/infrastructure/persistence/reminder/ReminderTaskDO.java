@@ -41,6 +41,9 @@ public class ReminderTaskDO {
     @Column(name = "next_fire_at", nullable = false)
     private Instant nextFireAt;
 
+    @Column(name = "cron_expression", length = 100)
+    private String cronExpression;
+
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 
