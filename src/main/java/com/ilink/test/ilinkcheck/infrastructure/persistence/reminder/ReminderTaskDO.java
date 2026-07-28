@@ -35,6 +35,9 @@ public class ReminderTaskDO {
     @Column(name = "status", length = 16, nullable = false)
     private String status;
 
+    @Column(name = "action", length = 20)
+    private String action;
+
     @Column(name = "timezone", length = 64, nullable = false)
     private String timezone;
 

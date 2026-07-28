@@ -1,6 +1,7 @@
 package com.ilink.test.ilinkcheck.infrastructure.persistence.reminder;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.ilink.test.ilinkcheck.application.reminder.model.ReminderAction;
 import com.ilink.test.ilinkcheck.application.reminder.model.ReminderRecord;
 import com.ilink.test.ilinkcheck.application.reminder.model.ReminderRecurrence;
 import com.ilink.test.ilinkcheck.application.reminder.model.ReminderStatus;
@@ -210,6 +211,8 @@ public class ReminderRepository implements com.ilink.test.ilinkcheck.application
         task.setScheduleLabel(reminder.scheduleLabel());
         task.setRecurrence(reminder.recurrence().name());
         task.setStatus(reminder.status().name());
+        task.setAction(reminder.action() != null && reminder.action() != ReminderAction.NONE
+                ? reminder.action().name() : null);
         task.setTimezone(reminder.timezone());
         task.setNextFireAt(reminder.nextFireAt());
         task.setCronExpression(reminder.cronExpression());
@@ -228,6 +231,7 @@ public class ReminderRepository implements com.ilink.test.ilinkcheck.application
                 task.getOriginalRequest(),
                 task.getScheduleLabel(),
                 ReminderRecurrence.valueOf(task.getRecurrence()),
+                task.getAction() != null ? ReminderAction.valueOf(task.getAction()) : ReminderAction.NONE,
                 ReminderStatus.valueOf(task.getStatus()),
                 task.getTimezone(),
                 task.getNextFireAt(),

@@ -1,5 +1,6 @@
 package com.ilink.test.ilinkcheck.application.reminder;
 
+import com.ilink.test.ilinkcheck.application.reminder.model.ReminderAction;
 import com.ilink.test.ilinkcheck.application.reminder.model.ReminderRaw;
 import com.ilink.test.ilinkcheck.application.reminder.model.ReminderRecord;
 import com.ilink.test.ilinkcheck.application.reminder.model.ReminderRecurrence;
@@ -58,6 +59,7 @@ public class ReminderService {
                     request,
                     reminder.scheduleLabel(),
                     reminder.recurrence(),
+                    reminder.action(),
                     ReminderStatus.ACTIVE,
                     clock.getZone().getId(),
                     reminder.nextFireAt(),
@@ -142,7 +144,7 @@ public class ReminderService {
         reminderScheduler.cancelReminder(actualId);
         ReminderRecord updated = new ReminderRecord(
                 reminder.id(), reminder.userId(), reminder.content(), reminder.originalRequest(),
-                reminder.scheduleLabel(), reminder.recurrence(), ReminderStatus.CANCELED,
+                reminder.scheduleLabel(), reminder.recurrence(), reminder.action(), ReminderStatus.CANCELED,
                 reminder.timezone(), reminder.nextFireAt(), reminder.cronExpression(),
                 reminder.createdAt(), clock.instant(), null, reminder.lastTriggeredAt()
         );
@@ -165,6 +167,7 @@ public class ReminderService {
                     reminder.originalRequest(),
                     reminder.scheduleLabel(),
                     ReminderRecurrence.DAILY,
+                    reminder.action(),
                     ReminderStatus.ACTIVE,
                     reminder.timezone(),
                     nextFireAt,
@@ -183,6 +186,7 @@ public class ReminderService {
                     reminder.originalRequest(),
                     reminder.scheduleLabel(),
                     ReminderRecurrence.CRON,
+                    reminder.action(),
                     ReminderStatus.ACTIVE,
                     reminder.timezone(),
                     reminder.nextFireAt(),
@@ -201,6 +205,7 @@ public class ReminderService {
                     reminder.originalRequest(),
                     reminder.scheduleLabel(),
                     ReminderRecurrence.ONCE,
+                    reminder.action(),
                     ReminderStatus.COMPLETED,
                     reminder.timezone(),
                     reminder.nextFireAt(),

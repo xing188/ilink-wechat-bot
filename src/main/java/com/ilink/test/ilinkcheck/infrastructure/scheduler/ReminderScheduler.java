@@ -4,9 +4,11 @@ import com.github.wechat.ilink.sdk.ILinkClient;
 import com.ilink.test.ilinkcheck.adapter.inbound.wechat.WechatBotRuntime;
 import com.ilink.test.ilinkcheck.adapter.outbound.wechat.WechatMessageGateway;
 import com.ilink.test.ilinkcheck.application.reminder.ReminderService;
+import com.ilink.test.ilinkcheck.application.reminder.model.ReminderAction;
 import com.ilink.test.ilinkcheck.application.reminder.model.ReminderRecord;
 import com.ilink.test.ilinkcheck.application.reminder.model.ReminderRecurrence;
 import com.ilink.test.ilinkcheck.application.reminder.model.ReminderStatus;
+import com.ilink.test.ilinkcheck.infrastructure.scheduler.action.ActionExecutor;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -14,6 +16,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.Clock;
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -26,17 +29,20 @@ public class ReminderScheduler {
     private final WechatMessageGateway wechatMessageGateway;
     private final CronTaskManager cronTaskManager;
     private final Clock clock;
+    private final List<ActionExecutor> actionExecutors;
 
     public ReminderScheduler(ReminderService reminderService,
                              WechatBotRuntime wechatBotRuntime,
                              WechatMessageGateway wechatMessageGateway,
                              CronTaskManager cronTaskManager,
-                             Clock clock) {
+                             Clock clock,
+                             List<ActionExecutor> actionExecutors) {
         this.reminderService = reminderService;
         this.wechatBotRuntime = wechatBotRuntime;
         this.wechatMessageGateway = wechatMessageGateway;
         this.cronTaskManager = cronTaskManager;
         this.clock = clock;
+        this.actionExecutors = actionExecutors;
     }
 
     @PostConstruct
@@ -68,10 +74,17 @@ public class ReminderScheduler {
 
         try {
             Instant now = clock.instant();
+            String message;
+
+            if (reminder.action() != null && reminder.action() != ReminderAction.NONE) {
+                message = executeAction(reminder);
+            }
+            else {
+                message = reminderService.buildFireMessage(reminder);
+            }
+
             boolean sent = wechatMessageGateway.sendTextIfPossible(
-                    client.get(),
-                    reminder.userId(),
-                    reminderService.buildFireMessage(reminder)
+                    client.get(), reminder.userId(), message
             );
 
             if (sent) {
@@ -85,5 +98,14 @@ public class ReminderScheduler {
         catch (Exception e) {
             log.warn("提醒推送失败: id={}, userId={}", reminder.id(), reminder.userId(), e);
         }
+    }
+
+    private String executeAction(ReminderRecord reminder) {
+        for (ActionExecutor executor : actionExecutors) {
+            if (executor.supportedAction() == reminder.action()) {
+                return executor.execute(reminder.userId(), null);
+            }
+        }
+        return reminderService.buildFireMessage(reminder);
     }
 }
