@@ -105,6 +105,15 @@ public class ReminderRepository implements com.ilink.test.ilinkcheck.application
         return reminders;
     }
 
+    @Override
+    public List<ReminderRecord> findAllActive() {
+        return reminderTaskJpaRepository
+                .findByStatusOrderByNextFireAtAsc(ReminderStatus.ACTIVE.name())
+                .stream()
+                .map(this::toRecord)
+                .toList();
+    }
+
     private List<ReminderRecord> readIndexedReminders(String key, Instant maxScore, int limit, Instant dueCutoff) {
         try {
             Set<String> reminderIds = maxScore == null
@@ -203,6 +212,7 @@ public class ReminderRepository implements com.ilink.test.ilinkcheck.application
         task.setStatus(reminder.status().name());
         task.setTimezone(reminder.timezone());
         task.setNextFireAt(reminder.nextFireAt());
+        task.setCronExpression(reminder.cronExpression());
         task.setCreatedAt(reminder.createdAt());
         task.setUpdatedAt(reminder.updatedAt());
         task.setCompletedAt(reminder.completedAt());
@@ -221,6 +231,7 @@ public class ReminderRepository implements com.ilink.test.ilinkcheck.application
                 ReminderStatus.valueOf(task.getStatus()),
                 task.getTimezone(),
                 task.getNextFireAt(),
+                task.getCronExpression(),
                 task.getCreatedAt(),
                 task.getUpdatedAt(),
                 task.getCompletedAt(),

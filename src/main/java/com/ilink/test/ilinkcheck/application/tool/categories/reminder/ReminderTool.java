@@ -42,4 +42,17 @@ public class ReminderTool implements ChatFunctionTool {
     public String listPendingReminders() {
         return reminderService.listPendingReminders(ReminderRequestContext.currentUserId().orElse(null));
     }
+
+    @Tool(
+            name = "cancelReminder",
+            description = """
+                    取消一条待办提醒。用户说“取消提醒”“删除提醒”“关掉提醒”等时调用。
+                    可以先调用 listPendingReminders 让用户看到提醒 ID，再调用此工具取消。
+                    """
+    )
+    public String cancelReminder(
+            @ToolParam(required = true, description = "要取消的提醒 ID，来自 listPendingReminders 的结果")
+            String reminderId) {
+        return reminderService.cancelReminder(ReminderRequestContext.currentUserId().orElse(null), reminderId);
+    }
 }

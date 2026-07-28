@@ -6,6 +6,8 @@ import com.ilink.test.ilinkcheck.application.reminder.model.ReminderRecurrence;
 import com.ilink.test.ilinkcheck.application.reminder.model.ReminderStatus;
 import com.ilink.test.ilinkcheck.application.reminder.parser.ReminderParseException;
 import com.ilink.test.ilinkcheck.application.reminder.parser.ReminderParser;
+import com.ilink.test.ilinkcheck.infrastructure.scheduler.ReminderScheduler;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
@@ -27,13 +29,16 @@ public class ReminderService {
 
     private final ReminderRepository reminderRepository;
     private final ReminderParser reminderParser;
+    private final ReminderScheduler reminderScheduler;
     private final Clock clock;
 
     public ReminderService(ReminderRepository reminderRepository,
                            ReminderParser reminderParser,
+                           @Lazy ReminderScheduler reminderScheduler,
                            Clock clock) {
         this.reminderRepository = reminderRepository;
         this.reminderParser = reminderParser;
+        this.reminderScheduler = reminderScheduler;
         this.clock = clock;
     }
 
@@ -56,12 +61,14 @@ public class ReminderService {
                     ReminderStatus.ACTIVE,
                     clock.getZone().getId(),
                     reminder.nextFireAt(),
+                    reminder.cronExpression(),
                     now,
                     now,
                     null,
                     null
             );
             reminderRepository.save(record);
+            reminderScheduler.scheduleReminder(record);
             return formatCreateSuccess(record);
         }
         catch (ReminderParseException e) {
@@ -98,6 +105,51 @@ public class ReminderService {
         return reminderRepository.findDueReminders(now, DUE_BATCH_SIZE);
     }
 
+    public List<ReminderRecord> findActiveReminders() {
+        return reminderRepository.findAllActive();
+    }
+
+    public String cancelReminder(String userId, String reminderId) {
+        if (!StringUtils.hasText(reminderId)) {
+            return "请提供要取消的提醒编号。";
+        }
+
+        String actualId = reminderId.trim();
+        List<ReminderRecord> activeReminders = reminderRepository.findPendingByUser(userId);
+
+        // 支持数字序号：如 "1" 表示第一条
+        if (actualId.matches("\\d+")) {
+            int index = Integer.parseInt(actualId);
+            if (index < 1 || index > activeReminders.size()) {
+                return "编号 " + index + " 超出范围，当前有 " + activeReminders.size() + " 条待办提醒。";
+            }
+            actualId = activeReminders.get(index - 1).id();
+        }
+
+        var opt = reminderRepository.findById(actualId);
+        if (opt.isEmpty()) {
+            return "未找到该提醒，请先查看待办事项确认编号。";
+        }
+
+        ReminderRecord reminder = opt.get();
+        if (!reminder.userId().equals(userId)) {
+            return "这不是您的提醒，无法取消。";
+        }
+        if (reminder.status() != ReminderStatus.ACTIVE) {
+            return "该提醒已处于" + (reminder.status() == ReminderStatus.COMPLETED ? "已完成" : "已取消") + "状态。";
+        }
+
+        reminderScheduler.cancelReminder(actualId);
+        ReminderRecord updated = new ReminderRecord(
+                reminder.id(), reminder.userId(), reminder.content(), reminder.originalRequest(),
+                reminder.scheduleLabel(), reminder.recurrence(), ReminderStatus.CANCELED,
+                reminder.timezone(), reminder.nextFireAt(), reminder.cronExpression(),
+                reminder.createdAt(), clock.instant(), null, reminder.lastTriggeredAt()
+        );
+        reminderRepository.save(updated);
+        return "✅ 已取消提醒：" + reminder.scheduleLabel() + " " + reminder.content();
+    }
+
     public ReminderRecord acknowledgeFired(ReminderRecord reminder, Instant firedAt) {
         if (reminder == null || !reminder.isActive()) {
             return reminder;
@@ -112,10 +164,29 @@ public class ReminderService {
                     reminder.content(),
                     reminder.originalRequest(),
                     reminder.scheduleLabel(),
-                    reminder.recurrence(),
+                    ReminderRecurrence.DAILY,
                     ReminderStatus.ACTIVE,
                     reminder.timezone(),
                     nextFireAt,
+                    null,
+                    reminder.createdAt(),
+                    firedAt,
+                    null,
+                    firedAt
+            );
+        }
+        else if (reminder.recurrence() == ReminderRecurrence.CRON) {
+            updated = new ReminderRecord(
+                    reminder.id(),
+                    reminder.userId(),
+                    reminder.content(),
+                    reminder.originalRequest(),
+                    reminder.scheduleLabel(),
+                    ReminderRecurrence.CRON,
+                    ReminderStatus.ACTIVE,
+                    reminder.timezone(),
+                    reminder.nextFireAt(),
+                    reminder.cronExpression(),
                     reminder.createdAt(),
                     firedAt,
                     null,
@@ -129,10 +200,11 @@ public class ReminderService {
                     reminder.content(),
                     reminder.originalRequest(),
                     reminder.scheduleLabel(),
-                    reminder.recurrence(),
+                    ReminderRecurrence.ONCE,
                     ReminderStatus.COMPLETED,
                     reminder.timezone(),
                     reminder.nextFireAt(),
+                    null,
                     reminder.createdAt(),
                     firedAt,
                     firedAt,
