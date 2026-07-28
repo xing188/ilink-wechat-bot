@@ -1,5 +1,7 @@
 package com.ilink.test.ilinkcheck.application.tool.weather;
 
+import com.ilink.test.ilinkcheck.application.tool.categories.weather.WeatherQueryService;
+import com.ilink.test.ilinkcheck.application.tool.categories.weather.WeatherReport;
 import com.ilink.test.ilinkcheck.infrastructure.client.weather.UapisWeatherClient;
 import com.ilink.test.ilinkcheck.infrastructure.client.weather.WeatherClientException;
 import org.junit.jupiter.api.Test;

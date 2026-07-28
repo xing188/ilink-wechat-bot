@@ -1,5 +1,8 @@
 package com.ilink.test.ilinkcheck.application.tool.expense;
 
+import com.ilink.test.ilinkcheck.application.tool.categories.expense.Expense;
+import com.ilink.test.ilinkcheck.application.tool.categories.expense.ExpenseRepository;
+import com.ilink.test.ilinkcheck.application.tool.categories.expense.ExpenseTool;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;

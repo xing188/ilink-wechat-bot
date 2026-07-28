@@ -1,6 +1,11 @@
 package com.ilink.test.ilinkcheck.application.conversation;
 
 import com.ilink.test.ilinkcheck.application.tool.ToolRegistry;
+import com.ilink.test.ilinkcheck.application.tool.orchestration.ToolOrchestrationResult;
+import com.ilink.test.ilinkcheck.application.tool.orchestration.ToolOrchestrator;
+import com.ilink.test.ilinkcheck.application.tool.selection.ToolContextAssembler;
+import com.ilink.test.ilinkcheck.application.tool.selection.ToolSelectionResult;
+import com.ilink.test.ilinkcheck.application.tool.selection.ToolSelector;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.memory.ChatMemory;
@@ -14,34 +19,71 @@ public class ConversationAiService {
 
     private static final String EMPTY_REPLY = "我暂时没有生成可用回复，请稍后再试。";
     private static final String MEMORY_INSTRUCTION = """
-            你是一个微信消息路由助手。
-            如果用户明确要求生成、绘制、画一张图片，你必须且只能输出格式：[DRAW_IMAGE]:英文提示词
-            如果用户询问天气、气温、降雨、空气质量、未来几天天气等信息，请优先使用天气工具，不要凭空猜测。
-            如果用户没有提供天气查询地点，不要调用天气工具，先追问用户要查询哪个城市。
-            如果用户想创建待办、设置定时提醒、查看待办事项或列出未完成提醒，请优先使用提醒工具，不要自己猜时间。
-            如果用户询问新闻、最新消息、热点、资讯、最近发生的事，请使用新闻工具查询，不要凭空编造。
-            否则直接正常回答用户，不要附带任何额外前缀。
+            你是一个微信消息助理。
+            如果用户明确要求生成或绘制图片，你必须且只能严格输出格式：[DRAW_IMAGE]:英文绘图提示词。
+            其余场景直接用中文正常回答用户，不要附带任何额外前缀。
+            不要提及内部工具选择、路由调度等系统内部逻辑。
             """;
+
     private final ChatClient chatClient;
     private final String systemPrompt;
     private final ToolRegistry toolRegistry;
+    private final ToolSelector toolSelector;
+    private final ToolContextAssembler toolContextAssembler;
+    private final ToolOrchestrator toolOrchestrator;
 
     public ConversationAiService(ChatClient conversationChatClient,
                                  @Value("${app.chat.system-prompt:You are a concise and accurate assistant. Reply in Chinese.}") String systemPrompt,
-                                 ToolRegistry toolRegistry) {
+                                 ToolRegistry toolRegistry,
+                                 ToolSelector toolSelector,
+                                 ToolContextAssembler toolContextAssembler,
+                                 ToolOrchestrator toolOrchestrator) {
         this.chatClient = conversationChatClient;
         this.systemPrompt = systemPrompt;
         this.toolRegistry = toolRegistry;
+        this.toolSelector = toolSelector;
+        this.toolContextAssembler = toolContextAssembler;
+        this.toolOrchestrator = toolOrchestrator;
     }
 
     public String generateReply(String conversationId, String text) {
         String normalizedConversationId = normalizeConversationId(conversationId);
         String normalizedText = normalizeText(text);
 
-        String aiDecision = chatClient.prompt()
-                .advisors(advisor -> advisor.param(ChatMemory.CONVERSATION_ID, normalizedConversationId))
-                .tools(toolRegistry.toolObjects())
-                .system(buildSystemPrompt())
+        ToolSelectionResult selection = toolSelector.select(normalizedConversationId, normalizedText);
+        Object[] selectedToolObjects = toolRegistry.toolObjects(selection.toolIds());
+        String toolPromptSection = toolContextAssembler.buildPromptSection(selection.toolIds());
+
+        log.info("conversationId={}, toolSelectionStrategy={}, selectedTools={}",
+                normalizedConversationId, selection.strategy(), selection.toolIds());
+
+        ToolOrchestrationResult orchestrationResult = toolOrchestrator.orchestrate(
+                normalizedConversationId,
+                normalizedText,
+                selection.toolIds(),
+                buildSystemPrompt(toolPromptSection)
+        );
+        if (orchestrationResult != null && StringUtils.hasText(orchestrationResult.finalReply())) {
+            log.info("conversationId={}, plannerNote={}, parallelUsed={}, executedSteps={}",
+                    normalizedConversationId,
+                    orchestrationResult.plan().plannerNote(),
+                    orchestrationResult.usedParallelExecution(),
+                    orchestrationResult.outcomes().stream().map(outcome -> outcome.step().toolName()).toList());
+            return orchestrationResult.finalReply();
+        }
+
+        log.info("conversationId={}, orchestrationFallback=direct-tool-calling, selectedTools={}",
+                normalizedConversationId, selection.toolIds());
+
+        ChatClient.ChatClientRequestSpec requestSpec = chatClient.prompt()
+                .advisors(advisor -> advisor.param(ChatMemory.CONVERSATION_ID, normalizedConversationId));
+
+        if (selectedToolObjects.length > 0) {
+            requestSpec = requestSpec.tools(selectedToolObjects);
+        }
+
+        String aiDecision = requestSpec
+                .system(buildSystemPrompt(toolPromptSection))
                 .user(normalizedText)
                 .call()
                 .content();
@@ -53,8 +95,8 @@ public class ConversationAiService {
         return aiDecision.trim();
     }
 
-    private String buildSystemPrompt() {
-        return systemPrompt + System.lineSeparator() + MEMORY_INSTRUCTION;
+    private String buildSystemPrompt(String toolPromptSection) {
+        return String.join(System.lineSeparator(), systemPrompt, MEMORY_INSTRUCTION, toolPromptSection);
     }
 
     private String normalizeConversationId(String conversationId) {
