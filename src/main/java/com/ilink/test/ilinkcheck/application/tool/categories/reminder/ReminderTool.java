@@ -3,7 +3,7 @@ package com.ilink.test.ilinkcheck.application.tool.categories.reminder;
 import com.ilink.test.ilinkcheck.application.reminder.ReminderService;
 import com.ilink.test.ilinkcheck.application.reminder.context.ReminderRequestContext;
 import com.ilink.test.ilinkcheck.application.tool.ChatFunctionTool;
-import com.ilink.test.ilinkcheck.application.tool.orchestration.ToolExecutionPolicy;
+import com.ilink.test.ilinkcheck.application.tool.orchestration.meta.ToolExecutionPolicy;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.annotation.ToolParam;
 import org.springframework.stereotype.Component;
