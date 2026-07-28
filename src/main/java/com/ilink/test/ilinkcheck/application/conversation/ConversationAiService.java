@@ -1,7 +1,7 @@
 package com.ilink.test.ilinkcheck.application.conversation;
 
 import com.ilink.test.ilinkcheck.application.tool.ToolRegistry;
-import com.ilink.test.ilinkcheck.application.tool.orchestration.ToolOrchestrationResult;
+import com.ilink.test.ilinkcheck.application.tool.orchestration.model.ToolOrchestrationResult;
 import com.ilink.test.ilinkcheck.application.tool.orchestration.ToolOrchestrator;
 import com.ilink.test.ilinkcheck.application.tool.selection.ToolContextAssembler;
 import com.ilink.test.ilinkcheck.application.tool.selection.ToolSelectionResult;

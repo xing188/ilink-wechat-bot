@@ -1,7 +1,7 @@
 package com.ilink.test.ilinkcheck.application.tool.categories.expense;
 
 import com.ilink.test.ilinkcheck.application.tool.ChatFunctionTool;
-import com.ilink.test.ilinkcheck.application.tool.orchestration.ToolExecutionPolicy;
+import com.ilink.test.ilinkcheck.application.tool.orchestration.meta.ToolExecutionPolicy;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.annotation.ToolParam;
 import org.springframework.stereotype.Component;
