@@ -1,4 +1,4 @@
-package com.ilink.test.ilinkcheck.application.agent.orchestrator;
+package com.ilink.test.ilinkcheck.application.agent.orchestrator.model;
 
 /**
  * 阶段执行器。

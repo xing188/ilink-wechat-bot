@@ -1,5 +1,13 @@
 package com.ilink.test.ilinkcheck.application.agent.orchestrator;
 
+import com.ilink.test.ilinkcheck.application.agent.orchestrator.model.AgentState;
+import com.ilink.test.ilinkcheck.application.agent.orchestrator.model.AgentTaskType;
+import com.ilink.test.ilinkcheck.application.agent.orchestrator.model.PhaseExecutionResult;
+import com.ilink.test.ilinkcheck.application.agent.orchestrator.model.PhaseExecutor;
+import com.ilink.test.ilinkcheck.application.agent.orchestrator.routing.IntentRouter;
+import com.ilink.test.ilinkcheck.application.agent.orchestrator.runtime.AgentStateStore;
+import com.ilink.test.ilinkcheck.application.agent.orchestrator.runtime.PhaseExecutorRegistry;
+import com.ilink.test.ilinkcheck.application.agent.orchestrator.runtime.WorkflowTemplateRegistry;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -8,12 +16,16 @@ import java.util.Optional;
 
 /**
  * Agent 大循环主入口。
- * 这一层只做状态推进和阶段调度，不直接写具体业务细节。
+ * 这一层只负责状态推进、阶段切换和等待用户输入，不直接写具体业务。
  */
 @Service
 @Slf4j
 public class AgentLoopService {
 
+    /**
+     * 单条工作流最多推进多少个阶段。
+     * 这是一个安全兜底，防止因为阶段设计错误出现死循环。
+     */
     private static final int MAX_PHASE_STEPS = 8;
 
     private final IntentRouter intentRouter;
@@ -32,8 +44,8 @@ public class AgentLoopService {
     }
 
     /**
-     * 尝试用 Agent 工作流处理当前消息。
-     * 返回 empty 表示这条消息不属于 Agent 路由，外层可以继续走普通对话 / 工具链路。
+     * 尝试让当前消息进入 Agent 工作流。
+     * 如果路由器判断这条消息不属于 Agent 任务，就返回 empty，让外层继续走普通对话或 tool 链路。
      */
     public Optional<String> tryHandle(String conversationId, String userMessage) {
         if (!StringUtils.hasText(conversationId) || !StringUtils.hasText(userMessage)) {
@@ -65,6 +77,9 @@ public class AgentLoopService {
         return Optional.of(runWorkflow(state));
     }
 
+    /**
+     * 继续执行已经进入等待态的工作流。
+     */
     private String resumeWorkflow(AgentState state, String userMessage) {
         if (isCancelCommand(userMessage)) {
             agentStateStore.remove(state.getConversationId());
@@ -80,6 +95,10 @@ public class AgentLoopService {
         return runWorkflow(state);
     }
 
+    /**
+     * 按阶段推进当前工作流。
+     * 真正的业务逻辑在各个 PhaseExecutor 里，这里只负责调度和状态维护。
+     */
     private String runWorkflow(AgentState state) {
         for (int i = 0; i < MAX_PHASE_STEPS; i++) {
             state.incrementExecutionRound();
@@ -106,7 +125,7 @@ public class AgentLoopService {
                         state.getConversationId(), state.getTaskType(), state.getCurrentPhase());
                 return StringUtils.hasText(result.replyToUser())
                         ? result.replyToUser()
-                        : "请继续提供下一步指令。";
+                        : "请继续提供下一步信息。";
             }
 
             if (result.nextPhase() == null) {
@@ -125,6 +144,9 @@ public class AgentLoopService {
         return state.getFinalReply();
     }
 
+    /**
+     * 用户在多轮工作流里可随时用这些关键词取消。
+     */
     private boolean isCancelCommand(String userMessage) {
         return "取消".equals(userMessage)
                 || "退出".equals(userMessage)

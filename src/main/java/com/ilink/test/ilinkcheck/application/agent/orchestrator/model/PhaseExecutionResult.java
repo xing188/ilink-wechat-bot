@@ -1,4 +1,4 @@
-package com.ilink.test.ilinkcheck.application.agent.orchestrator;
+package com.ilink.test.ilinkcheck.application.agent.orchestrator.model;
 
 import org.springframework.util.StringUtils;
 

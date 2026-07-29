@@ -1,4 +1,6 @@
-package com.ilink.test.ilinkcheck.application.agent.orchestrator;
+package com.ilink.test.ilinkcheck.application.agent.orchestrator.runtime;
+
+import com.ilink.test.ilinkcheck.application.agent.orchestrator.model.AgentState;
 
 import java.util.Optional;
 
