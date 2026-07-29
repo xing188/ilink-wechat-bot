@@ -32,6 +32,23 @@
 - **MCP（Model Context Protocol）**：对外数据连接（GitHub API、Dev.to API 抓取数据）
 - **Skill（技能/Agent 流程）**：内部业务处理与 CoT 逻辑（生成学习路线、技术博文审稿、结构化总结）
 
+必须保留的主链路：
+
+`TextMessageProcessor -> ConversationService -> ConversationAiService -> AgentLoopService / ToolSelector / ToolOrchestrator -> WechatMessageGateway`
+
+为了和 `agent.md` 里的计划一致，这里统一口径：
+
+- **MCP**：对外数据接入层。代码落在 `infrastructure.client.*` 和可选的 `infrastructure.mcp.*`
+- **Skill**：内部业务编排层。代码落在 `application.agent.feature.*` 和 `application.agent.orchestrator.*`
+- **Tool**：暴露给模型或编排器调用的能力壳。代码落在 `application.tool.categories.*`
+
+对应到这次升级：
+
+- GitHub Repo 速读 = `GitHub MCP + RepoDigest Skill + GitHub Tool`
+- 技术路线规划 = `Dev.to / WebSearch MCP + Roadmap Skill + Roadmap Tool`
+- 博文审稿 = `RAG + Review Skill + Review Tool`
+- 每日晨报 = `GitHub / Dev.to MCP + Digest Skill + Digest Tool + Scheduler`
+
 ---
 
 ## 功能模块

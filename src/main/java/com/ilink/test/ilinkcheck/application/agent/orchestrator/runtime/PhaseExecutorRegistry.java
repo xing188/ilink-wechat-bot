@@ -1,5 +1,8 @@
-package com.ilink.test.ilinkcheck.application.agent.orchestrator;
+package com.ilink.test.ilinkcheck.application.agent.orchestrator.runtime;
 
+import com.ilink.test.ilinkcheck.application.agent.orchestrator.model.AgentPhase;
+import com.ilink.test.ilinkcheck.application.agent.orchestrator.model.AgentTaskType;
+import com.ilink.test.ilinkcheck.application.agent.orchestrator.model.PhaseExecutor;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
