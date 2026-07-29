@@ -1,6 +1,7 @@
 package com.ilink.test.ilinkcheck.infrastructure.persistence.reminder;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.ilink.test.ilinkcheck.application.reminder.model.ReminderAction;
 import com.ilink.test.ilinkcheck.application.reminder.model.ReminderRecord;
 import com.ilink.test.ilinkcheck.application.reminder.model.ReminderRecurrence;
 import com.ilink.test.ilinkcheck.application.reminder.model.ReminderStatus;
@@ -105,6 +106,15 @@ public class ReminderRepository implements com.ilink.test.ilinkcheck.application
         return reminders;
     }
 
+    @Override
+    public List<ReminderRecord> findAllActive() {
+        return reminderTaskJpaRepository
+                .findByStatusOrderByNextFireAtAsc(ReminderStatus.ACTIVE.name())
+                .stream()
+                .map(this::toRecord)
+                .toList();
+    }
+
     private List<ReminderRecord> readIndexedReminders(String key, Instant maxScore, int limit, Instant dueCutoff) {
         try {
             Set<String> reminderIds = maxScore == null
@@ -201,8 +211,11 @@ public class ReminderRepository implements com.ilink.test.ilinkcheck.application
         task.setScheduleLabel(reminder.scheduleLabel());
         task.setRecurrence(reminder.recurrence().name());
         task.setStatus(reminder.status().name());
+        task.setAction(reminder.action() != null && reminder.action() != ReminderAction.NONE
+                ? reminder.action().name() : null);
         task.setTimezone(reminder.timezone());
         task.setNextFireAt(reminder.nextFireAt());
+        task.setCronExpression(reminder.cronExpression());
         task.setCreatedAt(reminder.createdAt());
         task.setUpdatedAt(reminder.updatedAt());
         task.setCompletedAt(reminder.completedAt());
@@ -218,9 +231,11 @@ public class ReminderRepository implements com.ilink.test.ilinkcheck.application
                 task.getOriginalRequest(),
                 task.getScheduleLabel(),
                 ReminderRecurrence.valueOf(task.getRecurrence()),
+                task.getAction() != null ? ReminderAction.valueOf(task.getAction()) : ReminderAction.NONE,
                 ReminderStatus.valueOf(task.getStatus()),
                 task.getTimezone(),
                 task.getNextFireAt(),
+                task.getCronExpression(),
                 task.getCreatedAt(),
                 task.getUpdatedAt(),
                 task.getCompletedAt(),
