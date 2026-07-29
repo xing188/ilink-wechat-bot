@@ -1,5 +1,6 @@
 package com.ilink.test.ilinkcheck.application.conversation;
 
+import com.ilink.test.ilinkcheck.application.agent.orchestrator.AgentLoopService;
 import com.ilink.test.ilinkcheck.application.tool.ToolRegistry;
 import com.ilink.test.ilinkcheck.application.tool.orchestration.ToolOrchestrator;
 import com.ilink.test.ilinkcheck.application.tool.selection.ToolContextAssembler;
@@ -33,6 +34,7 @@ class ConversationAiServiceTest {
         ToolSelector toolSelector = mock(ToolSelector.class);
         ToolContextAssembler toolContextAssembler = mock(ToolContextAssembler.class);
         ToolOrchestrator toolOrchestrator = mock(ToolOrchestrator.class);
+        AgentLoopService agentLoopService = mock(AgentLoopService.class);
         Object[] toolObjects = {new Object()};
 
         when(chatClient.prompt()).thenReturn(requestSpec);
@@ -42,6 +44,7 @@ class ConversationAiServiceTest {
             consumer.accept(advisorSpec);
             return requestSpec;
         }).when(requestSpec).advisors(org.mockito.ArgumentMatchers.<Consumer<ChatClient.AdvisorSpec>>any());
+        when(agentLoopService.tryHandle("user-42", "hello")).thenReturn(java.util.Optional.empty());
         when(toolSelector.select("user-42", "hello")).thenReturn(ToolSelectionResult.selected(List.of("news"), "rule"));
         when(toolRegistry.toolObjects(List.of("news"))).thenReturn(toolObjects);
         when(toolContextAssembler.buildPromptSection(List.of("news"))).thenReturn("news prompt");
@@ -58,7 +61,8 @@ class ConversationAiServiceTest {
                 toolRegistry,
                 toolSelector,
                 toolContextAssembler,
-                toolOrchestrator
+                toolOrchestrator,
+                agentLoopService
         );
 
         String result = service.generateReply("user-42", "hello");
@@ -80,6 +84,7 @@ class ConversationAiServiceTest {
         ToolSelector toolSelector = mock(ToolSelector.class);
         ToolContextAssembler toolContextAssembler = mock(ToolContextAssembler.class);
         ToolOrchestrator toolOrchestrator = mock(ToolOrchestrator.class);
+        AgentLoopService agentLoopService = mock(AgentLoopService.class);
 
         when(chatClient.prompt()).thenReturn(requestSpec);
         when(advisorSpec.param(anyString(), any())).thenReturn(advisorSpec);
@@ -88,6 +93,7 @@ class ConversationAiServiceTest {
             consumer.accept(advisorSpec);
             return requestSpec;
         }).when(requestSpec).advisors(org.mockito.ArgumentMatchers.<Consumer<ChatClient.AdvisorSpec>>any());
+        when(agentLoopService.tryHandle("user-42", "chat only")).thenReturn(java.util.Optional.empty());
         when(toolSelector.select("user-42", "chat only")).thenReturn(ToolSelectionResult.noTools("llm-none"));
         when(toolRegistry.toolObjects(List.of())).thenReturn(new Object[0]);
         when(toolContextAssembler.buildPromptSection(List.of())).thenReturn("no tools");
@@ -103,12 +109,40 @@ class ConversationAiServiceTest {
                 toolRegistry,
                 toolSelector,
                 toolContextAssembler,
-                toolOrchestrator
+                toolOrchestrator,
+                agentLoopService
         );
 
         String result = service.generateReply("user-42", "chat only");
 
         assertThat(result).isEqualTo("plain reply");
         verify(requestSpec, never()).tools(any(Object[].class));
+    }
+
+    @Test
+    void shouldReturnAgentReplyWhenWorkflowHandlesMessage() {
+        ChatClient chatClient = mock(ChatClient.class);
+        ToolRegistry toolRegistry = mock(ToolRegistry.class);
+        ToolSelector toolSelector = mock(ToolSelector.class);
+        ToolContextAssembler toolContextAssembler = mock(ToolContextAssembler.class);
+        ToolOrchestrator toolOrchestrator = mock(ToolOrchestrator.class);
+        AgentLoopService agentLoopService = mock(AgentLoopService.class);
+
+        when(agentLoopService.tryHandle("user-42", "看下今天AI热点")).thenReturn(java.util.Optional.of("agent reply"));
+
+        ConversationAiService service = new ConversationAiService(
+                chatClient,
+                "base prompt",
+                toolRegistry,
+                toolSelector,
+                toolContextAssembler,
+                toolOrchestrator,
+                agentLoopService
+        );
+
+        String result = service.generateReply("user-42", "看下今天AI热点");
+
+        assertThat(result).isEqualTo("agent reply");
+        verify(toolSelector, never()).select(anyString(), anyString());
     }
 }

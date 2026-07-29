@@ -1,5 +1,6 @@
 package com.ilink.test.ilinkcheck.application.conversation;
 
+import com.ilink.test.ilinkcheck.application.agent.orchestrator.AgentLoopService;
 import com.ilink.test.ilinkcheck.application.tool.ToolRegistry;
 import com.ilink.test.ilinkcheck.application.tool.orchestration.model.ToolOrchestrationResult;
 import com.ilink.test.ilinkcheck.application.tool.orchestration.ToolOrchestrator;
@@ -31,24 +32,33 @@ public class ConversationAiService {
     private final ToolSelector toolSelector;
     private final ToolContextAssembler toolContextAssembler;
     private final ToolOrchestrator toolOrchestrator;
+    private final AgentLoopService agentLoopService;
 
     public ConversationAiService(ChatClient conversationChatClient,
                                  @Value("${app.chat.system-prompt:You are a concise and accurate assistant. Reply in Chinese.}") String systemPrompt,
                                  ToolRegistry toolRegistry,
                                  ToolSelector toolSelector,
                                  ToolContextAssembler toolContextAssembler,
-                                 ToolOrchestrator toolOrchestrator) {
+                                 ToolOrchestrator toolOrchestrator,
+                                 AgentLoopService agentLoopService) {
         this.chatClient = conversationChatClient;
         this.systemPrompt = systemPrompt;
         this.toolRegistry = toolRegistry;
         this.toolSelector = toolSelector;
         this.toolContextAssembler = toolContextAssembler;
         this.toolOrchestrator = toolOrchestrator;
+        this.agentLoopService = agentLoopService;
     }
 
     public String generateReply(String conversationId, String text) {
         String normalizedConversationId = normalizeConversationId(conversationId);
         String normalizedText = normalizeText(text);
+
+        String agentReply = agentLoopService.tryHandle(normalizedConversationId, normalizedText).orElse(null);
+        if (StringUtils.hasText(agentReply)) {
+            log.info("conversationId={}, route=agent-workflow", normalizedConversationId);
+            return agentReply;
+        }
 
         ToolSelectionResult selection = toolSelector.select(normalizedConversationId, normalizedText);
         Object[] selectedToolObjects = toolRegistry.toolObjects(selection.toolIds());
