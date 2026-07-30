@@ -4,11 +4,16 @@ import com.ilink.test.ilinkcheck.application.agent.dto.roadmap.DevToArticle;
 import com.ilink.test.ilinkcheck.application.agent.dto.roadmap.RoadmapPlan;
 import com.ilink.test.ilinkcheck.application.agent.dto.roadmap.RoadmapStep;
 import com.ilink.test.ilinkcheck.application.agent.dto.roadmap.SearchResult;
+import com.ilink.test.ilinkcheck.application.agent.feature.roadmap.RoadmapComposeService.RoadmapPlanDto;
+import com.ilink.test.ilinkcheck.application.tool.categories.translation.TranslationService;
 import org.junit.jupiter.api.Test;
+import org.springframework.ai.chat.client.ChatClient;
 
 import java.util.List;
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
 
 class RoadmapComposeServiceTest {
 
@@ -134,5 +139,149 @@ class RoadmapComposeServiceTest {
         );
         String reply = service.render(service.compose("eBPF", List.of(), refs), refs);
         assertThat(reply).contains("[eBPF official docs](https://example.com/docs)");
+    }
+
+    @Test
+    void translatesArticleAndReferenceWhenTranslateFlagSet() {
+        // 当 translate=true 且注入翻译服务时，英文资料应被批量翻译成中文
+        TranslationService mockTranslator = new TranslationService() {
+            @Override public String translate(String text, String src, String tgt) { return "【译】" + text; }
+            @Override public List<String> batchTranslate(List<String> texts, String src, String tgt) {
+                return texts.stream().map(t -> "【译】" + t).toList();
+            }
+        };
+        RoadmapComposeService translatingService = new RoadmapComposeService();
+        translatingService.setTranslationService(mockTranslator);
+
+        List<DevToArticle> articles = List.of(
+                new DevToArticle("Getting Started with eBPF", "https://dev.to/x", "ebpf", 320, "An intro article")
+        );
+        List<SearchResult> refs = List.of(
+                new SearchResult("eBPF official docs", "https://example.com/docs", "Official documentation")
+        );
+
+        String reply = translatingService.render(
+                translatingService.compose("eBPF", articles, refs), refs, true);
+
+        assertThat(reply).contains("【译】Getting Started with eBPF");
+        assertThat(reply).contains("【译】An intro article");
+        assertThat(reply).contains("【译】eBPF official docs");
+        assertThat(reply).contains("【译】Official documentation");
+        // 链接 url 不应被翻译
+        assertThat(reply).contains("(https://dev.to/x)");
+    }
+
+    @Test
+    void keepsOriginalWhenTranslateFlagFalseOrNoTranslator() {
+        // translate=false：即使注入了翻译服务，资料也保持原文（不调用 batchTranslate）
+        TranslationService mockTranslator = new TranslationService() {
+            @Override public String translate(String text, String src, String tgt) { return "【译】" + text; }
+            @Override public List<String> batchTranslate(List<String> texts, String src, String tgt) {
+                throw new RuntimeException("不应被调用");
+            }
+        };
+        RoadmapComposeService translatingService = new RoadmapComposeService();
+        translatingService.setTranslationService(mockTranslator);
+
+        List<DevToArticle> articles = List.of(
+                new DevToArticle("Getting Started with eBPF", "https://dev.to/x", "ebpf", 320, "An intro article")
+        );
+        String reply = translatingService.render(
+                translatingService.compose("eBPF", articles, List.of()), List.of(), false);
+        assertThat(reply).contains("Getting Started with eBPF");
+        assertThat(reply).doesNotContain("【译】");
+    }
+
+    @Test
+    void fallsBackToOriginalWhenTranslatorReturnsNull() {
+        // 翻译服务的 batchTranslate 返回含 null 的列表时，对应位置安全回退为原文
+        TranslationService nullTranslator = new TranslationService() {
+            @Override public String translate(String text, String src, String tgt) { return null; }
+            @Override public List<String> batchTranslate(List<String> texts, String src, String tgt) {
+                // 模拟部分翻译失败：偶数位置返回 null
+                List<String> results = new java.util.ArrayList<>();
+                for (int i = 0; i < texts.size(); i++) {
+                    results.add(i % 2 == 0 ? null : "【译】" + texts.get(i));
+                }
+                return results;
+            }
+        };
+        RoadmapComposeService translatingService = new RoadmapComposeService();
+        translatingService.setTranslationService(nullTranslator);
+
+        List<DevToArticle> articles = List.of(
+                new DevToArticle("Getting Started with eBPF", "https://dev.to/x", "ebpf", 320, "An intro article")
+        );
+        String reply = translatingService.render(
+                translatingService.compose("eBPF", articles, List.of()), List.of(), true);
+        // title 是第0个（偶数）→ null → 回退原文；description 是第1个（奇数）→ 有翻译
+        assertThat(reply).contains("Getting Started with eBPF");  // title 回退原文
+    }
+
+    @Test
+    void composeWithLlmProducesTopicSpecificDescriptions() {
+        // 走 LLM 路径时，步骤说明应贴合主题、由 LLM 提供，而非模板的空泛文字
+        RoadmapComposeService llmService = new RoadmapComposeService() {
+            @Override
+            protected RoadmapPlanDto generatePlanDto(String topic, String context) {
+                RoadmapPlanDto dto = new RoadmapPlanDto();
+                dto.prerequisites = List.of(new RoadmapPlanDto.StepDto("Linux 基础", "熟悉命令行与内核模块加载"));
+                dto.coreConcepts = List.of(new RoadmapPlanDto.StepDto("eBPF 程序结构", "理解 kprobe/uprobe 挂载点"));
+                dto.projectIdeas = List.of(new RoadmapPlanDto.StepDto("写一个 hello-bpf", "用 bpftool 加载并观察输出"));
+                return dto;
+            }
+        };
+
+        RoadmapPlan plan = llmService.composeWithLlm("eBPF", List.of(), List.of());
+
+        assertThat(plan.coreConcepts()).anyMatch(s -> s.title().contains("eBPF 程序结构"));
+        assertThat(plan.coreConcepts()).anyMatch(s -> s.description().contains("kprobe"));
+        assertThat(plan.prerequisites()).anyMatch(s -> s.description().contains("内核模块"));
+        // 渲染结果不应包含模板的空泛说明
+        String reply = llmService.render(plan, List.of());
+        assertThat(reply).doesNotContain("掌握变量、循环");
+    }
+
+    @Test
+    void buildContextIncludesTopicAndMaterials() {
+        // 喂给 LLM 的上下文应包含主题与真实资料，便于生成点名资源的说明
+        List<DevToArticle> articles = List.of(
+                new DevToArticle("Getting Started with eBPF", "https://dev.to/x", "ebpf", 320, "intro")
+        );
+        List<SearchResult> refs = List.of(
+                new SearchResult("eBPF docs", "https://example.com", "docs")
+        );
+
+        String ctx = service.buildContext("eBPF", articles, refs);
+
+        assertThat(ctx).contains("eBPF");
+        assertThat(ctx).contains("Getting Started with eBPF");
+        assertThat(ctx).contains("eBPF docs");
+    }
+
+    @Test
+    void parsePlanDtoStripsMarkdownFences() {
+        // LLM 可能用 ```json 围栏包裹，解析时应兼容
+        String fenced = "```json\n{\"prerequisites\":[{\"title\":\"A\",\"description\":\"B\"}]}\n```";
+        RoadmapPlanDto dto = service.parsePlanDto(fenced);
+        assertThat(dto.prerequisites).hasSize(1);
+        assertThat(dto.prerequisites.get(0).title).isEqualTo("A");
+        assertThat(dto.prerequisites.get(0).description).isEqualTo("B");
+    }
+
+    @Test
+    void composeFallsBackToTemplateWhenLlmFails() {
+        // plannerClient 非空但 LLM 抛错时，compose 应安全退回模板，不抛异常
+        RoadmapComposeService svc = new RoadmapComposeService() {
+            @Override
+            protected RoadmapPlanDto generatePlanDto(String topic, String context) {
+                throw new RuntimeException("LLM down");
+            }
+        };
+        svc.setPlannerClient(mock(ChatClient.class));
+
+        RoadmapPlan plan = svc.compose("eBPF", List.of(), List.of());
+
+        assertThat(plan.prerequisites()).anyMatch(s -> s.description().contains("掌握变量"));
     }
 }

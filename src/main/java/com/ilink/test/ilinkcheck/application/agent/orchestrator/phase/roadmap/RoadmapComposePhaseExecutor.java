@@ -33,9 +33,10 @@ public class RoadmapComposePhaseExecutor implements PhaseExecutor {
         String topic = state.getArtifact(AgentArtifacts.REQUEST_TOPIC, String.class);
         List<DevToArticle> articles = state.getArtifact(AgentArtifacts.ROADMAP_ARTICLES);
         List<SearchResult> references = state.getArtifact(AgentArtifacts.ROADMAP_REFERENCES);
+        boolean translate = Boolean.TRUE.equals(state.getArtifact(AgentArtifacts.ROADMAP_TRANSLATE, Boolean.class));
 
         RoadmapPlan plan = composeService.compose(topic, articles, references);
-        String reply = composeService.render(plan, references);
+        String reply = composeService.render(plan, references, translate);
 
         return PhaseExecutionResult.finish(reply, Map.of(
                 AgentArtifacts.ROADMAP_PLAN, plan

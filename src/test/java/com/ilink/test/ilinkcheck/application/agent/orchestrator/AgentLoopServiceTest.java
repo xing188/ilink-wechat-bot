@@ -23,6 +23,7 @@ import com.ilink.test.ilinkcheck.application.agent.spi.mcp.DevToArticleProvider;
 import com.ilink.test.ilinkcheck.application.agent.spi.mcp.GitHubRepoProvider;
 import com.ilink.test.ilinkcheck.application.agent.spi.mcp.WebSearchProvider;
 import com.ilink.test.ilinkcheck.application.agent.spi.rag.StyleGuideRetriever;
+import com.ilink.test.ilinkcheck.application.tool.categories.translation.TranslationService;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -131,7 +132,43 @@ class AgentLoopServiceTest {
         assertThat(reply).isEmpty();
     }
 
+    @Test
+    void shouldTranslateRoadmapOnFollowUpCommand() {
+        // 锁定新功能：先生成英文路线，再发"翻译成中文"应复用上次资料并重渲染为中文
+        RoadmapComposeService composeService = new RoadmapComposeService();
+        composeService.setTranslationService(new TranslationService() {
+            @Override public String translate(String text, String src, String tgt) { return "【译】" + text; }
+            @Override public java.util.List<String> batchTranslate(java.util.List<String> texts, String src, String tgt) {
+                return texts.stream().map(t -> "【译】" + t).toList();
+            }
+        });
+        AgentLoopService agentLoopService = createAgentLoopService(composeService);
+
+        agentLoopService.tryHandle("conv-8", "我想学 eBPF，帮我规划学习路线");
+        Optional<String> reply = agentLoopService.tryHandle("conv-8", "翻译成中文");
+
+        assertThat(reply).isPresent();
+        assertThat(reply.get()).contains("eBPF 学习路线");
+        assertThat(reply.get()).contains("【译】");
+    }
+
+    @Test
+    void shouldRestartRoadmapWhenNewTopicAfterFinished() {
+        // 已完成路线后收到新的学习主题，应开启全新路线而非复用旧结果
+        AgentLoopService agentLoopService = createAgentLoopService();
+
+        agentLoopService.tryHandle("conv-9", "我想学 eBPF，帮我规划学习路线");
+        Optional<String> reply = agentLoopService.tryHandle("conv-9", "我想学 RAG");
+
+        assertThat(reply).isPresent();
+        assertThat(reply.get()).contains("RAG 学习路线");
+    }
+
     private AgentLoopService createAgentLoopService() {
+        return createAgentLoopService(new RoadmapComposeService());
+    }
+
+    private AgentLoopService createAgentLoopService(RoadmapComposeService composeService) {
         GitHubRepoProvider gitHubRepoProvider = new GitHubRepoProvider() {
             @Override
             public RepoInfo fetchRepo(String owner, String repo) {
@@ -175,7 +212,7 @@ class AgentLoopServiceTest {
                 new GitHubFetchPhaseExecutor(gitHubRepoProvider),
                 new GitHubSummarizePhaseExecutor(),
                 new RoadmapFetchPhaseExecutor(devToArticleProvider, webSearchProvider),
-                new RoadmapComposePhaseExecutor(new RoadmapComposeService()),
+                new RoadmapComposePhaseExecutor(composeService),
                 new ReviewCollectDraftPhaseExecutor(),
                 new ReviewGeneratePhaseExecutor(styleGuideRetriever),
                 new DigestCollectSchedulePhaseExecutor(),

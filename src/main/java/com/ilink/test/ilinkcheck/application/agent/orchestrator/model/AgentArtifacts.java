@@ -16,6 +16,7 @@ public final class AgentArtifacts {
     public static final String ROADMAP_ARTICLES = "roadmapArticles";
     public static final String ROADMAP_REFERENCES = "roadmapReferences";
     public static final String ROADMAP_PLAN = "roadmapPlan";
+    public static final String ROADMAP_TRANSLATE = "roadmapTranslate";
     public static final String REVIEW_SUGGESTIONS = "reviewSuggestions";
     public static final String REVIEW_REPORT = "reviewReport";
     public static final String DIGEST_CONTENT = "digestContent";
