@@ -2,6 +2,7 @@ package com.ilink.test.ilinkcheck.application.agent.orchestrator.phase.github;
 
 import com.ilink.test.ilinkcheck.application.agent.dto.github.RepoInfo;
 import com.ilink.test.ilinkcheck.application.agent.orchestrator.model.*;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.util.Map;
@@ -10,8 +11,11 @@ import java.util.Map;
  * GitHub 速读第二阶段。
  * 负责把仓库原始资料整理成用户可直接阅读的摘要回复。
  */
+@Slf4j
 @Service
 public class GitHubSummarizePhaseExecutor implements PhaseExecutor {
+
+    private static final String MSG_MISS_REPO_DATA = "仓库原始资料缺失，本次速读未能继续。";
 
     @Override
     public boolean supports(AgentTaskType taskType, AgentPhase phase) {
@@ -20,10 +24,16 @@ public class GitHubSummarizePhaseExecutor implements PhaseExecutor {
 
     @Override
     public PhaseExecutionResult execute(AgentState state) {
+        String conversationId = state.getConversationId();
         RepoInfo repoInfo = state.getArtifact(AgentArtifacts.REPO_INFO, RepoInfo.class);
+
         if (repoInfo == null) {
-            return PhaseExecutionResult.finish("仓库原始资料缺失，本次速读未能继续。", Map.of());
+            log.warn("conversationId={}, phase=GITHUB_SUMMARIZE, artifact REPO_INFO missing", conversationId);
+            return PhaseExecutionResult.finish(MSG_MISS_REPO_DATA, Map.of());
         }
+
+        log.info("conversationId={}, phase=GITHUB_SUMMARIZE, start render summary, repo={}/{}",
+                conversationId, repoInfo.owner(), repoInfo.name());
 
         String reply = """
                 GitHub 仓库速读：%s/%s
@@ -51,9 +61,17 @@ public class GitHubSummarizePhaseExecutor implements PhaseExecutor {
                 defaultText(repoInfo.readmeSummary(), "暂无摘要")
         ).trim();
 
+        log.info("conversationId={}, phase=GITHUB_SUMMARIZE, workflow finished", conversationId);
+        // finish：任务全部结束，AgentLoopService会清理会话状态
         return PhaseExecutionResult.finish(reply, Map.of());
     }
 
+    /**
+     * 空值兜底工具方法
+     * @param text 原始文本
+     * @param fallback 为空时展示默认文案
+     * @return 处理后文本
+     */
     private String defaultText(String text, String fallback) {
         return text == null || text.isBlank() ? fallback : text.trim();
     }

@@ -2,30 +2,35 @@ package com.ilink.test.ilinkcheck.infrastructure.rag;
 
 import com.ilink.test.ilinkcheck.application.agent.dto.review.ReviewSuggestion;
 import com.ilink.test.ilinkcheck.application.agent.spi.rag.StyleGuideRetriever;
-import org.springframework.ai.document.Document;
+import com.ilink.test.ilinkcheck.application.rag.RagService;
+import com.ilink.test.ilinkcheck.application.rag.model.RagChunk;
+import com.ilink.test.ilinkcheck.application.rag.model.RagKnowledgeBase;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 
+/**
+ * 审稿场景兼容适配器。
+ * 对外继续暴露旧的 StyleGuideRetriever 接口，对内改走通用 RAG 服务。
+ */
 @Service
 public class StyleGuideRetrieverImpl implements StyleGuideRetriever {
 
-    private final VectorStoreService vectorStoreService;
+    private final RagService ragService;
 
-    public StyleGuideRetrieverImpl(VectorStoreService vectorStoreService) {
-        this.vectorStoreService = vectorStoreService;
+    public StyleGuideRetrieverImpl(RagService ragService) {
+        this.ragService = ragService;
     }
 
     @Override
     public List<ReviewSuggestion> check(String draftText) {
-        List<Document> relevantDocs = vectorStoreService.search(draftText, 5);
-
-        return relevantDocs.stream()
-                .map(doc -> new ReviewSuggestion(
-                        doc.getMetadata().getOrDefault("category", "general").toString(),
-                        doc.getMetadata().getOrDefault("location", "").toString(),
-                        doc.getFormattedContent(),
-                        doc.getMetadata().getOrDefault("example", "").toString()
+        List<RagChunk> chunks = ragService.retrieve(RagKnowledgeBase.STYLE_GUIDE, draftText, 5);
+        return chunks.stream()
+                .map(chunk -> new ReviewSuggestion(
+                        chunk.metadata().getOrDefault("category", "general").toString(),
+                        chunk.metadata().getOrDefault("location", "").toString(),
+                        chunk.content(),
+                        chunk.metadata().getOrDefault("example", "").toString()
                 ))
                 .toList();
     }

@@ -1,5 +1,6 @@
 package com.ilink.test.ilinkcheck.application.agent.orchestrator.model;
 
+import lombok.Getter;
 import org.springframework.util.StringUtils;
 
 import java.util.LinkedHashMap;
@@ -12,16 +13,24 @@ import java.util.Objects;
  */
 public class AgentState {
 
+    @Getter
     private final String conversationId;
+    @Getter
     private final AgentTaskType taskType;
+    @Getter
     private final String originalUserMessage;
     private final Map<String, Object> artifacts = new LinkedHashMap<>();
-
+    @Getter
     private AgentPhase currentPhase;
+    @Getter
     private String latestUserMessage;
+    @Getter
     private int executionRound;
+    @Getter
     private boolean waitingUserInput;
+    @Getter
     private boolean finished;
+    @Getter
     private String finalReply;
 
     private AgentState(String conversationId,
@@ -41,42 +50,6 @@ public class AgentState {
                                          AgentPhase startPhase,
                                          String userMessage) {
         return new AgentState(conversationId, taskType, startPhase, userMessage, userMessage);
-    }
-
-    public String getConversationId() {
-        return conversationId;
-    }
-
-    public AgentTaskType getTaskType() {
-        return taskType;
-    }
-
-    public AgentPhase getCurrentPhase() {
-        return currentPhase;
-    }
-
-    public String getOriginalUserMessage() {
-        return originalUserMessage;
-    }
-
-    public String getLatestUserMessage() {
-        return latestUserMessage;
-    }
-
-    public int getExecutionRound() {
-        return executionRound;
-    }
-
-    public boolean isWaitingUserInput() {
-        return waitingUserInput;
-    }
-
-    public boolean isFinished() {
-        return finished;
-    }
-
-    public String getFinalReply() {
-        return finalReply;
     }
 
     public Map<String, Object> getArtifactsView() {
