@@ -33,7 +33,9 @@ public class ReplyStrategyService {
         }
 
         String normalized = replyText.trim();
-        if (normalized.length() > LONG_TEXT_THRESHOLD) {
+        // FORCE_TEXT 模式下始终以纯文本发送，不转 Word（适用于路线/报告等结构化输出）
+        boolean allowDocxFallback = (replyMode != ReplyMode.FORCE_TEXT);
+        if (allowDocxFallback && normalized.length() > LONG_TEXT_THRESHOLD) {
             log.info("Reply length={} exceeds threshold={}, preparing docx draft.",
                     normalized.length(), LONG_TEXT_THRESHOLD);
 

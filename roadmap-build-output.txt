@@ -1,0 +1,96 @@
+[INFO] Scanning for projects...
+[INFO] 
+[INFO] ---------------------< com.ilink.test:ilink-check >---------------------
+[INFO] Building ilink-check 0.0.1-SNAPSHOT
+[INFO]   from pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- resources:3.3.1:resources (default-resources) @ ilink-check ---
+[INFO] Copying 4 resources from src\main\resources to target\classes
+[INFO] Copying 6 resources from src\main\resources to target\classes
+[INFO] 
+[INFO] --- compiler:3.14.1:compile (default-compile) @ ilink-check ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- resources:3.3.1:testResources (default-testResources) @ ilink-check ---
+[INFO] Copying 1 resource from src\test\resources to target\test-classes
+[INFO] 
+[INFO] --- compiler:3.14.1:testCompile (default-testCompile) @ ilink-check ---
+[INFO] Recompiling the module because of changed source code.
+[INFO] Compiling 20 source files with javac [debug parameters release 21] to target\test-classes
+[INFO] 
+[INFO] --- surefire:3.5.5:test (default-test) @ ilink-check ---
+[INFO] Using auto detected provider org.apache.maven.surefire.junitplatform.JUnitPlatformProvider
+[INFO] 
+[INFO] -------------------------------------------------------
+[INFO]  T E S T S
+[INFO] -------------------------------------------------------
+[INFO] Running com.ilink.test.ilinkcheck.application.agent.feature.roadmap.RoadmapComposeServiceTest
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.156 s -- in com.ilink.test.ilinkcheck.application.agent.feature.roadmap.RoadmapComposeServiceTest
+[INFO] Running com.ilink.test.ilinkcheck.application.agent.orchestrator.AgentLoopServiceTest
+11:24:04.699 [main] INFO com.ilink.test.ilinkcheck.application.agent.orchestrator.AgentLoopService -- conversationId=conv-2, agentTaskType=TECH_ROADMAP, workflowEvent=start
+11:24:04.710 [main] INFO com.ilink.test.ilinkcheck.application.agent.orchestrator.AgentLoopService -- conversationId=conv-2, agentTaskType=TECH_ROADMAP, workflowEvent=finish, rounds=2
+11:24:04.713 [main] INFO com.ilink.test.ilinkcheck.application.agent.orchestrator.AgentLoopService -- conversationId=conv-3, agentTaskType=DOC_REVIEW, workflowEvent=start
+11:24:04.714 [main] INFO com.ilink.test.ilinkcheck.application.agent.orchestrator.AgentLoopService -- conversationId=conv-3, agentTaskType=DOC_REVIEW, currentPhase=REVIEW_COLLECT_DRAFT, workflowEvent=wait-user-input
+11:24:04.714 [main] INFO com.ilink.test.ilinkcheck.application.agent.orchestrator.AgentLoopService -- conversationId=conv-3, agentTaskType=DOC_REVIEW, currentPhase=REVIEW_COLLECT_DRAFT, workflowEvent=resume
+11:24:04.723 [main] INFO com.ilink.test.ilinkcheck.application.agent.orchestrator.AgentLoopService -- conversationId=conv-3, agentTaskType=DOC_REVIEW, workflowEvent=finish, rounds=3
+11:24:04.726 [main] INFO com.ilink.test.ilinkcheck.application.agent.orchestrator.AgentLoopService -- conversationId=conv-4, agentTaskType=DAILY_DIGEST_SUBSCRIBE, workflowEvent=start
+11:24:04.727 [main] INFO com.ilink.test.ilinkcheck.application.agent.orchestrator.AgentLoopService -- conversationId=conv-4, agentTaskType=DAILY_DIGEST_SUBSCRIBE, currentPhase=DIGEST_COLLECT_SCHEDULE, workflowEvent=wait-user-input
+11:24:04.727 [main] INFO com.ilink.test.ilinkcheck.application.agent.orchestrator.AgentLoopService -- conversationId=conv-4, agentTaskType=DAILY_DIGEST_SUBSCRIBE, currentPhase=DIGEST_COLLECT_SCHEDULE, workflowEvent=resume
+11:24:04.731 [main] INFO com.ilink.test.ilinkcheck.application.agent.orchestrator.AgentLoopService -- conversationId=conv-4, agentTaskType=DAILY_DIGEST_SUBSCRIBE, workflowEvent=finish, rounds=3
+11:24:04.734 [main] INFO com.ilink.test.ilinkcheck.application.agent.orchestrator.AgentLoopService -- conversationId=conv-6, agentTaskType=TECH_ROADMAP, workflowEvent=start
+11:24:04.734 [main] INFO com.ilink.test.ilinkcheck.application.agent.orchestrator.AgentLoopService -- conversationId=conv-6, agentTaskType=TECH_ROADMAP, workflowEvent=finish, rounds=2
+11:24:04.737 [main] INFO com.ilink.test.ilinkcheck.application.agent.orchestrator.AgentLoopService -- conversationId=conv-7, agentTaskType=TECH_ROADMAP, workflowEvent=start
+11:24:04.739 [main] INFO com.ilink.test.ilinkcheck.application.agent.orchestrator.AgentLoopService -- conversationId=conv-7, agentTaskType=TECH_ROADMAP, workflowEvent=finish, rounds=2
+11:24:04.740 [main] INFO com.ilink.test.ilinkcheck.application.agent.orchestrator.AgentLoopService -- conversationId=conv-1, agentTaskType=GITHUB_REPO_DIGEST, workflowEvent=start
+11:24:04.753 [main] INFO com.ilink.test.ilinkcheck.application.agent.orchestrator.AgentLoopService -- conversationId=conv-1, agentTaskType=GITHUB_REPO_DIGEST, workflowEvent=finish, rounds=2
+[INFO] Tests run: 7, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.162 s -- in com.ilink.test.ilinkcheck.application.agent.orchestrator.AgentLoopServiceTest
+[INFO] Running com.ilink.test.ilinkcheck.application.agent.orchestrator.RoadmapChainDebugTest
+11:24:04.762 [main] INFO com.ilink.test.ilinkcheck.application.agent.orchestrator.AgentLoopService -- conversationId=debug--1129214915, agentTaskType=TECH_ROADMAP, workflowEvent=start
+11:24:04.763 [main] INFO com.ilink.test.ilinkcheck.application.agent.orchestrator.AgentLoopService -- conversationId=debug--1129214915, agentTaskType=TECH_ROADMAP, workflowEvent=finish, rounds=2
+==================================================
+>>> CASE-2 学习 RAG
+>>> input            = 学习 RAG
+>>> IntentRouter     = TECH_ROADMAP
+>>> extractTopic      = [RAG]
+<<< [链路命中] 输出如下：
+RAG 学习路线
+
+第一阶段：预备知识
+- 基础编程语法
+- 命令行与调试能力
+- 阅读英文文档的基本能力
+
+第二阶段：核心概念
+- RAG 的核心概念
+- RAG 的运行机制
+- RAG 的常见约束
+
+第三阶段：实战建议
+- 做一个最小 demo
+- 完成一个可复现实践
+- 整理一篇学习笔记
+
+推荐资料
+- Getting Started with RAG：从基础概念、运行机制和第一个 demo 入手的入门文章。（? 320）
+- Practical RAG Patterns：更偏实战，关注常见模式、调试和落地方式。（? 240）
+- RAG in Production：讨论线上使用时的观测、约束和风险点。（? 190）
+
+补充参考
+- RAG tutorial official docs：补充官方文档入口，便于确认核心概念和 API。
+- RAG tutorial architecture guide：补充一篇架构视角的延伸阅读。
+
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.011 s -- in com.ilink.test.ilinkcheck.application.agent.orchestrator.RoadmapChainDebugTest
+[INFO] Running com.ilink.test.ilinkcheck.application.skill.TechRoadmapSkillTest
+[INFO] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.019 s -- in com.ilink.test.ilinkcheck.application.skill.TechRoadmapSkillTest
+[INFO] 
+[INFO] Results:
+[INFO] 
+[INFO] Tests run: 18, Failures: 0, Errors: 0, Skipped: 0
+[INFO] 
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD SUCCESS
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  7.136 s
+[INFO] Finished at: 2026-07-30T11:24:04+08:00
+[INFO] ------------------------------------------------------------------------

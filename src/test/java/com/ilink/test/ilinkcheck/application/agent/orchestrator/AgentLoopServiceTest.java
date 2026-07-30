@@ -12,6 +12,7 @@ import com.ilink.test.ilinkcheck.application.agent.orchestrator.phase.github.Git
 import com.ilink.test.ilinkcheck.application.agent.orchestrator.phase.github.GitHubSummarizePhaseExecutor;
 import com.ilink.test.ilinkcheck.application.agent.orchestrator.phase.review.ReviewCollectDraftPhaseExecutor;
 import com.ilink.test.ilinkcheck.application.agent.orchestrator.phase.review.ReviewGeneratePhaseExecutor;
+import com.ilink.test.ilinkcheck.application.agent.feature.roadmap.RoadmapComposeService;
 import com.ilink.test.ilinkcheck.application.agent.orchestrator.phase.roadmap.RoadmapComposePhaseExecutor;
 import com.ilink.test.ilinkcheck.application.agent.orchestrator.phase.roadmap.RoadmapFetchPhaseExecutor;
 import com.ilink.test.ilinkcheck.application.agent.orchestrator.routing.IntentRouter;
@@ -61,6 +62,28 @@ class AgentLoopServiceTest {
         assertThat(reply.get()).contains("eBPF 学习路线");
         assertThat(reply.get()).contains("第一阶段：预备知识");
         assertThat(reply.get()).contains("推荐资料");
+    }
+
+    @Test
+    void shouldRouteBareLearningPhrase() {
+        // 锁定修复 #1：裸“学习 + 主题”此前不命中路由
+        AgentLoopService agentLoopService = createAgentLoopService();
+
+        Optional<String> reply = agentLoopService.tryHandle("conv-6", "学习 RAG");
+
+        assertThat(reply).isPresent();
+        assertThat(reply.get()).contains("RAG 学习路线");
+    }
+
+    @Test
+    void shouldSupportChineseTopic() {
+        // 锁定修复 #2：中文主题此前抽不到，会被反问
+        AgentLoopService agentLoopService = createAgentLoopService();
+
+        Optional<String> reply = agentLoopService.tryHandle("conv-7", "我想学 微服务");
+
+        assertThat(reply).isPresent();
+        assertThat(reply.get()).contains("微服务 学习路线");
     }
 
     @Test
@@ -152,7 +175,7 @@ class AgentLoopServiceTest {
                 new GitHubFetchPhaseExecutor(gitHubRepoProvider),
                 new GitHubSummarizePhaseExecutor(),
                 new RoadmapFetchPhaseExecutor(devToArticleProvider, webSearchProvider),
-                new RoadmapComposePhaseExecutor(),
+                new RoadmapComposePhaseExecutor(new RoadmapComposeService()),
                 new ReviewCollectDraftPhaseExecutor(),
                 new ReviewGeneratePhaseExecutor(styleGuideRetriever),
                 new DigestCollectSchedulePhaseExecutor(),

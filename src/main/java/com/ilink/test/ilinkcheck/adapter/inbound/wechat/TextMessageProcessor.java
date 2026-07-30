@@ -52,7 +52,8 @@ public class TextMessageProcessor {
             wechatMessageGateway.startTyping(iLinkClient, fromUserId);
             try {
                 ConversationResult result = conversationService.handleTextMessage(fromUserId, text);
-                sendConversationResult(iLinkClient, fromUserId, result, ReplyMode.TEXT);
+                ReplyMode mode = detectReplyMode(result);
+                sendConversationResult(iLinkClient, fromUserId, result, mode);
             }
             catch (Exception e) {
                 log.error("处理文本消息失败。user={}", fromUserId, e);
@@ -92,5 +93,23 @@ public class TextMessageProcessor {
 
         ReplyDraft draft = replyStrategyService.build(fromUserId, result.content(), replyMode);
         wechatMessageGateway.sendReply(client, fromUserId, draft);
+    }
+
+    /**
+     * 根据回复内容自动判断是否需要强制纯文本模式。
+     * <p>结构化输出（如学习路线、审稿报告）包含明确的阶段/章节标记，
+     * 用户需要在聊天窗口内直接阅读，不适合转为 Word 文档。</p>
+     */
+    private ReplyMode detectReplyMode(ConversationResult result) {
+        if (result.type() != ConversationResult.Type.TEXT || !StringUtils.hasText(result.content())) {
+            return ReplyMode.TEXT;
+        }
+        String content = result.content();
+        // 路线类输出特征：包含"第一阶段"或"学习路线"等结构化标记
+        if (content.contains("第一阶段") || content.contains("学习路线")
+                || content.contains("技术文档审稿报告")) {
+            return ReplyMode.FORCE_TEXT;
+        }
+        return ReplyMode.TEXT;
     }
 }
