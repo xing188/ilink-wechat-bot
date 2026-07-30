@@ -1,11 +1,10 @@
 package com.ilink.test.ilinkcheck.config;
 
-import com.ilink.test.ilinkcheck.infrastructure.rag.VectorStoreService;
+import com.alibaba.cloud.ai.dashscope.api.DashScopeApi;
+import com.alibaba.cloud.ai.dashscope.embedding.DashScopeEmbeddingModel;
+import com.alibaba.cloud.ai.dashscope.embedding.DashScopeEmbeddingOptions;
 import org.springframework.ai.document.MetadataMode;
 import org.springframework.ai.embedding.EmbeddingModel;
-import org.springframework.ai.openai.OpenAiEmbeddingModel;
-import org.springframework.ai.openai.OpenAiEmbeddingOptions;
-import org.springframework.ai.openai.api.OpenAiApi;
 import org.springframework.ai.vectorstore.SimpleVectorStore;
 import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.beans.factory.annotation.Value;
@@ -21,9 +20,11 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class DashScopeRagConfig {
 
-    @Value("${spring.ai.openai.api-key}")
+    @Value("${spring.ai.dashscope.api-key}")
     private String apiKey;
 
+<<<<<<< HEAD
+=======
     @Value("${spring.ai.openai.base-url}")
     private String baseUrl;
 
@@ -31,35 +32,26 @@ public class DashScopeRagConfig {
     private String embeddingModel;
 
     //HTTP通信客户端
+>>>>>>> 5166eda2d7c711f4a633add3b01ad13cfd33de16
     @Bean
-    public OpenAiApi dashScopeEmbeddingApi() {
-        return OpenAiApi.builder()
-                .baseUrl(trimTrailingSlash(baseUrl))
+    public DashScopeApi dashScopeApi() {
+        return DashScopeApi.builder()
                 .apiKey(apiKey)
+                .baseUrl("https://dashscope.aliyuncs.com")
                 .build();
     }
 
     //文本向量化能力
     @Bean
-    public EmbeddingModel dashScopeEmbeddingModel(OpenAiApi dashScopeEmbeddingApi) {
-        OpenAiEmbeddingOptions options = OpenAiEmbeddingOptions.builder()
-                .model(embeddingModel)
+    public DashScopeEmbeddingModel dashScopeEmbeddingModel(DashScopeApi dashScopeApi) {
+        DashScopeEmbeddingOptions options = DashScopeEmbeddingOptions.builder()
+                .model("text-embedding-v3")
                 .build();
-        return new OpenAiEmbeddingModel(dashScopeEmbeddingApi, MetadataMode.ALL, options);
+        return new DashScopeEmbeddingModel(dashScopeApi, MetadataMode.EMBED, options);
     }
 
     @Bean
-    public VectorStore simpleVectorStore(EmbeddingModel dashScopeEmbeddingModel) {
-        return SimpleVectorStore.builder(dashScopeEmbeddingModel).build();
-    }
-
-    @Bean
-    public VectorStoreService vectorStoreService(VectorStore simpleVectorStore) {
-        return new VectorStoreService(simpleVectorStore);
-    }
-
-    private String trimTrailingSlash(String value) {
-        if (value == null) return null;
-        return value.endsWith("/") ? value.substring(0, value.length() - 1) : value;
+    public VectorStore vectorStore(EmbeddingModel embeddingModel) {
+        return SimpleVectorStore.builder(embeddingModel).build();
     }
 }
