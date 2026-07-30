@@ -17,6 +17,17 @@ import java.util.Optional;
 /**
  * Agent 大循环主入口。
  * 这一层只负责状态推进、阶段切换和等待用户输入，不直接写具体业务。
+ *
+ * 整体运行模型：
+ * 1. 收到用户消息，根据会话ID查询是否存在正在运行的Agent工作流
+ * 2. 已有工作流：恢复会话状态，继续推进流程（resumeWorkflow）
+ * 3. 无工作流：调用意图路由，判断是否需要启动Agent工作流
+ * 4. 启动工作流：加载工作流模板，初始化Agent状态，驱动阶段自动执行 runWorkflow
+ *
+ * PhaseExecutionResult 三种分支逻辑：
+ * ① finished = true：任务全部完成，清理会话状态，返回最终回复
+ * ② needUserInput = true：流程暂停，持久化会话，等待用户下一条消息继续（Human-in-the-loop）
+ * ③ 切换nextPhase：不中断，继续自动执行下一阶段
  */
 @Service
 @Slf4j
@@ -44,7 +55,7 @@ public class AgentLoopService {
     }
 
     /**
-     * 尝试让当前消息进入 Agent 工作流。
+     * 入口方法：尝试让当前消息进入 Agent 工作流。
      * 如果路由器判断这条消息不属于 Agent 任务，就返回 empty，让外层继续走普通对话或 tool 链路。
      */
     public Optional<String> tryHandle(String conversationId, String userMessage) {
@@ -62,6 +73,7 @@ public class AgentLoopService {
 
         Optional<AgentTaskType> taskType = intentRouter.route(normalizedUserMessage);
         if (taskType.isEmpty()) {
+            log.info("无法识别当前意图，已进入普通对话。");
             return Optional.empty();
         }
 
@@ -78,7 +90,11 @@ public class AgentLoopService {
     }
 
     /**
-     * 继续执行已经进入等待态的工作流。
+     * 恢复已暂停的工作流
+     * 用户在流程等待输入时发送新消息，触发该方法
+     * @param state 持久化的会话状态
+     * @param userMessage 用户最新输入文本
+     * @return 工作流执行后的回复
      */
     private String resumeWorkflow(AgentState state, String userMessage) {
         if (isCancelCommand(userMessage)) {
