@@ -1,6 +1,8 @@
 app:
   tianapi:
     key: ${TIANAPI_KEY:""}
+  search:
+    serpapi-key: ${SERPAPI_API_KEY:""}
   book:
     douban-api-key: REPLACE_WITH_DOUBANAPI_KEY
   github:
