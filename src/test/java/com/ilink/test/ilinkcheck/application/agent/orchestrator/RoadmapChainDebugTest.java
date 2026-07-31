@@ -81,7 +81,17 @@ class RoadmapChainDebugTest {
         AgentMockConfig mock = new AgentMockConfig();
         DevToArticleProvider devToArticleProvider = mock.defaultDevToArticleProvider();
         WebSearchProvider webSearchProvider = mock.defaultWebSearchProvider();
-        GitHubRepoProvider gitHubRepoProvider = mock.defaultGitHubRepoProvider();
+        GitHubRepoProvider gitHubRepoProvider = new GitHubRepoProvider() {
+            @Override
+            public RepoInfo fetchRepo(String owner, String repo) {
+                return new RepoInfo(owner, repo, "Demo repository", "Java", 1, 0, "README", "Java");
+            }
+
+            @Override
+            public List<TrendingRepo> fetchTrending(String language, String since) {
+                return List.of();
+            }
+        };
         StyleGuideRetriever styleGuideRetriever = mock.defaultStyleGuideRetriever();
 
         List<PhaseExecutor> executors = List.of(

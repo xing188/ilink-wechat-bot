@@ -1,12 +1,9 @@
 package com.ilink.test.ilinkcheck.config;
 
-import com.ilink.test.ilinkcheck.application.agent.dto.github.RepoInfo;
-import com.ilink.test.ilinkcheck.application.agent.dto.github.TrendingRepo;
 import com.ilink.test.ilinkcheck.application.agent.dto.review.ReviewSuggestion;
 import com.ilink.test.ilinkcheck.application.agent.dto.roadmap.DevToArticle;
 import com.ilink.test.ilinkcheck.application.agent.dto.roadmap.SearchResult;
 import com.ilink.test.ilinkcheck.application.agent.spi.mcp.DevToArticleProvider;
-import com.ilink.test.ilinkcheck.application.agent.spi.mcp.GitHubRepoProvider;
 import com.ilink.test.ilinkcheck.application.agent.spi.mcp.WebSearchProvider;
 import com.ilink.test.ilinkcheck.application.agent.spi.rag.StyleGuideRetriever;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
@@ -21,48 +18,6 @@ import java.util.List;
  */
 @Configuration
 public class AgentMockConfig {
-
-    @Bean
-    @ConditionalOnMissingBean(GitHubRepoProvider.class)
-    public GitHubRepoProvider defaultGitHubRepoProvider() {
-        return new GitHubRepoProvider() {
-            @Override
-            public RepoInfo fetchRepo(String owner, String repo) {
-                return new RepoInfo(
-                        owner,
-                        repo,
-                        "一个用于演示多 Agent、路由和工具编排的示例仓库。",
-                        "Java",
-                        1280,
-                        156,
-                        "README 重点介绍了如何用 Spring Boot 和 Spring AI 搭建一个可扩展的 Agent 项目。",
-                        "Java / Spring Boot / Spring AI"
-                );
-            }
-
-            @Override
-            public List<TrendingRepo> fetchTrending(String language, String since) {
-                return List.of(
-                        new TrendingRepo(
-                                "spring-projects",
-                                "spring-ai",
-                                "Spring 生态下的 AI 应用开发框架。",
-                                "Java",
-                                320,
-                                "https://github.com/spring-projects/spring-ai"
-                        ),
-                        new TrendingRepo(
-                                "langchain-ai",
-                                "langgraph",
-                                "面向多 Agent 工作流的图式编排框架。",
-                                "Python",
-                                280,
-                                "https://github.com/langchain-ai/langgraph"
-                        )
-                );
-            }
-        };
-    }
 
     @Bean
     @ConditionalOnMissingBean(DevToArticleProvider.class)

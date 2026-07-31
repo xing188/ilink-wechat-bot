@@ -9,15 +9,26 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.http.client.ClientHttpRequestFactory;
+import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientResponseException;
 
+import java.net.http.HttpClient;
+import java.security.GeneralSecurityException;
+import java.security.SecureRandom;
+import java.security.cert.X509Certificate;
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.Collections;
 import java.util.List;
+
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.X509TrustManager;
 
 @Component
 @ConditionalOnProperty(prefix = "app.github", name = "enabled", havingValue = "true", matchIfMissing = true)
@@ -33,9 +44,15 @@ public class GitHubApiClient implements GitHubRepoProvider {
     public GitHubApiClient(RestClient.Builder restClientBuilder,
                            @Value("${app.github.api-base:https://api.github.com}") String apiBase,
                            @Value("${app.github.token:}") String token,
-                           @Value("${app.github.trending-api-url:}") String trendingApiUrl) {
+                           @Value("${app.github.trending-api-url:}") String trendingApiUrl,
+                           @Value("${app.github.trust-local-ca:false}") boolean trustLocalCa) {
         // GitHub REST API client
         RestClient.Builder builder = restClientBuilder.baseUrl(trimTrailingSlash(apiBase));
+        if (trustLocalCa) {
+            // Steam++ 等工具会把 GitHub 域名改写成本机代理，Java 默认信任库不认其证书。
+            log.warn("app.github.trust-local-ca=true: GitHub client will trust certificates from local TLS proxies, such as Steam++. Hostname verification stays enabled.");
+            builder = builder.requestFactory(createLenientRequestFactory());
+        }
         if (StringUtils.hasText(token)) {
             builder = builder.defaultHeader("Authorization", "Bearer " + token);
         }
@@ -187,30 +204,88 @@ public class GitHubApiClient implements GitHubRepoProvider {
                     .retrieve()
                     .body(ApiReadmeResponse.class);
             if (readmeResp == null || !StringUtils.hasText(readmeResp.content())) {
-                return "";
+                log.warn("README 响应为空: {}/{}", owner, repo);
+                return "README 暂无可用内容。";
             }
-            byte[] decoded = java.util.Base64.getDecoder().decode(readmeResp.content());
-            String text = new String(decoded, java.nio.charset.StandardCharsets.UTF_8);
-            String[] lines = text.split("\n");
-            StringBuilder summary = new StringBuilder();
-            for (String line : lines) {
-                String trimmed = line.strip();
-                if (trimmed.isEmpty() || trimmed.startsWith("#") || trimmed.startsWith("![")
-                        || trimmed.startsWith("<") || trimmed.startsWith("```")) {
-                    continue;
-                }
-                summary.append(trimmed).append(" ");
-                if (summary.length() > 300) {
-                    break;
-                }
+
+            String text;
+            try {
+                // GitHub API 的 base64 content 可能带换行，必须用 MIME decoder。
+                text = new String(java.util.Base64.getMimeDecoder().decode(readmeResp.content()),
+                        java.nio.charset.StandardCharsets.UTF_8);
+            } catch (IllegalArgumentException e) {
+                // 部分网关/代理可能返回原文而非 base64
+                text = readmeResp.content();
             }
-            String result = summary.toString().strip();
-            return result.length() > 300 ? result.substring(0, 300) + "..." : result;
+
+            return extractReadmeSections(text);
         } catch (Exception e) {
-            return "";
+            log.warn("README 获取失败: {}/{} - {}", owner, repo, e.getMessage());
+            return "README 获取失败（限速或网络问题），请稍后再试。";
         }
     }
 
+    private String extractReadmeSections(String text) {
+        java.util.Set<String> keySections = java.util.Set.of(
+                "简介", "介绍", "特性", "功能", "安装", "快速开始", "快速上手", "架构", "模块", "使用", "示例",
+                "introduction", "overview", "about", "features", "installation",
+                "getting started", "quick start", "usage", "architecture", "example", "examples"
+        );
+
+        String[] lines = text.split("\n", -1);
+        StringBuilder intro = new StringBuilder();
+        StringBuilder result = new StringBuilder();
+        String heading = "";
+        StringBuilder body = new StringBuilder();
+
+        for (String rawLine : lines) {
+            String line = rawLine.strip();
+            if (line.startsWith("#")) {
+                appendSection(result, heading, body);
+                heading = line.replaceFirst("^#+\\s*", "").trim();
+                body.setLength(0);
+                continue;
+            }
+            if (line.isEmpty() || line.startsWith("![") || line.startsWith("<")
+                    || line.startsWith("```")) {
+                continue;
+            }
+            if (heading.isEmpty()) {
+                if (intro.length() < 200) {
+                    if (intro.length() > 0) intro.append(" ");
+                    intro.append(line);
+                }
+            } else if (keySections.contains(heading.toLowerCase())) {
+                if (body.length() < 500) {
+                    if (body.length() > 0) body.append("\n");
+                    body.append(line);
+                }
+            }
+        }
+        appendSection(result, heading, body);
+
+        StringBuilder summary = new StringBuilder();
+        if (intro.length() > 0) {
+            summary.append("## 简介\n").append(intro);
+        }
+        if (result.length() > 0) {
+            if (summary.length() > 0) summary.append("\n\n");
+            summary.append(result);
+        }
+        if (summary.isEmpty()) {
+            summary.append("README 内容较空，建议直接访问仓库查看。");
+        }
+
+        String finalText = summary.toString().strip();
+        return finalText.length() > 1200 ? finalText.substring(0, 1200) + "..." : finalText;
+    }
+
+    private void appendSection(StringBuilder target, String heading, StringBuilder body) {
+        if (body.length() == 0) return;
+        if (target.length() > 0) target.append("\n\n");
+        if (!heading.isEmpty()) target.append("## ").append(heading).append("\n");
+        target.append(body);
+    }
     private String detectTechStack(String primaryLanguage, List<String> topics) {
         StringBuilder sb = new StringBuilder();
         if (StringUtils.hasText(primaryLanguage)) {
@@ -257,6 +332,40 @@ public class GitHubApiClient implements GitHubRepoProvider {
     private String trimTrailingSlash(String value) {
         if (value == null) return null;
         return value.endsWith("/") ? value.substring(0, value.length() - 1) : value;
+    }
+
+    private ClientHttpRequestFactory createLenientRequestFactory() {
+        HttpClient httpClient = HttpClient.newBuilder()
+                .connectTimeout(Duration.ofSeconds(10))
+                .sslContext(createLenientSslContext())
+                .build();
+        return new JdkClientHttpRequestFactory(httpClient);
+    }
+
+    private SSLContext createLenientSslContext() {
+        try {
+            TrustManager[] trustManagers = new TrustManager[] {
+                    new X509TrustManager() {
+                        @Override
+                        public X509Certificate[] getAcceptedIssuers() {
+                            return new X509Certificate[0];
+                        }
+
+                        @Override
+                        public void checkClientTrusted(X509Certificate[] chain, String authType) {
+                        }
+
+                        @Override
+                        public void checkServerTrusted(X509Certificate[] chain, String authType) {
+                        }
+                    }
+            };
+            SSLContext context = SSLContext.getInstance("TLS");
+            context.init(null, trustManagers, new SecureRandom());
+            return context;
+        } catch (GeneralSecurityException e) {
+            throw new IllegalStateException("Failed to initialize GitHub client SSL context", e);
+        }
     }
 
     // --- GitHub REST API response DTOs ---
