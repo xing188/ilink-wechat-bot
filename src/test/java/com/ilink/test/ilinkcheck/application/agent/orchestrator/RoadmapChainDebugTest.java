@@ -12,7 +12,9 @@ import com.ilink.test.ilinkcheck.application.agent.orchestrator.phase.digest.Dig
 import com.ilink.test.ilinkcheck.application.agent.orchestrator.phase.github.GitHubFetchPhaseExecutor;
 import com.ilink.test.ilinkcheck.application.agent.orchestrator.phase.github.GitHubSummarizePhaseExecutor;
 import com.ilink.test.ilinkcheck.application.agent.orchestrator.phase.review.ReviewCollectDraftPhaseExecutor;
-import com.ilink.test.ilinkcheck.application.agent.orchestrator.phase.review.ReviewGeneratePhaseExecutor;
+import com.ilink.test.ilinkcheck.application.agent.orchestrator.phase.review.ReviewFixGeneratePhaseExecutor;
+import com.ilink.test.ilinkcheck.application.agent.feature.review.DocReviewPhaseExecutor;
+import com.ilink.test.ilinkcheck.application.agent.feature.review.DraftReviewService;
 import com.ilink.test.ilinkcheck.application.agent.feature.roadmap.RoadmapComposeService;
 import com.ilink.test.ilinkcheck.application.agent.orchestrator.phase.roadmap.RoadmapComposePhaseExecutor;
 import com.ilink.test.ilinkcheck.application.agent.orchestrator.phase.roadmap.RoadmapFetchPhaseExecutor;
@@ -83,6 +85,10 @@ class RoadmapChainDebugTest {
         WebSearchProvider webSearchProvider = mock.defaultWebSearchProvider();
         GitHubRepoProvider gitHubRepoProvider = mock.defaultGitHubRepoProvider();
         StyleGuideRetriever styleGuideRetriever = mock.defaultStyleGuideRetriever();
+        DraftReviewService draftReviewService = new DraftReviewService(
+                styleGuideRetriever,
+                new com.ilink.test.ilinkcheck.infrastructure.document.DocumentExportService()
+        );
 
         List<PhaseExecutor> executors = List.of(
                 new GitHubFetchPhaseExecutor(gitHubRepoProvider),
@@ -90,7 +96,8 @@ class RoadmapChainDebugTest {
                 new RoadmapFetchPhaseExecutor(devToArticleProvider, webSearchProvider),
                 new RoadmapComposePhaseExecutor(new RoadmapComposeService()),
                 new ReviewCollectDraftPhaseExecutor(),
-                new ReviewGeneratePhaseExecutor(styleGuideRetriever),
+                new DocReviewPhaseExecutor(draftReviewService),
+                new ReviewFixGeneratePhaseExecutor(draftReviewService),
                 new DigestCollectSchedulePhaseExecutor(),
                 new DigestComposePhaseExecutor(gitHubRepoProvider, devToArticleProvider)
         );

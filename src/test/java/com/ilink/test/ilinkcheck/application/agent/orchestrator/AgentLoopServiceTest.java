@@ -5,6 +5,8 @@ import com.ilink.test.ilinkcheck.application.agent.dto.github.TrendingRepo;
 import com.ilink.test.ilinkcheck.application.agent.dto.review.ReviewSuggestion;
 import com.ilink.test.ilinkcheck.application.agent.dto.roadmap.DevToArticle;
 import com.ilink.test.ilinkcheck.application.agent.dto.roadmap.SearchResult;
+import com.ilink.test.ilinkcheck.application.agent.feature.review.DocReviewPhaseExecutor;
+import com.ilink.test.ilinkcheck.application.agent.feature.review.DraftReviewService;
 import com.ilink.test.ilinkcheck.application.agent.orchestrator.model.PhaseExecutor;
 import com.ilink.test.ilinkcheck.application.agent.orchestrator.phase.digest.DigestCollectSchedulePhaseExecutor;
 import com.ilink.test.ilinkcheck.application.agent.orchestrator.phase.digest.DigestComposePhaseExecutor;
@@ -12,7 +14,7 @@ import com.ilink.test.ilinkcheck.application.agent.orchestrator.phase.github.Git
 import com.ilink.test.ilinkcheck.application.agent.orchestrator.phase.github.GitHubSummarizePhaseExecutor;
 import com.ilink.test.ilinkcheck.application.agent.orchestrator.phase.review.ReviewCollectDraftPhaseExecutor;
 import com.ilink.test.ilinkcheck.application.agent.orchestrator.phase.review.ReviewConfirmPhaseExecutor;
-import com.ilink.test.ilinkcheck.application.agent.orchestrator.phase.review.ReviewGeneratePhaseExecutor;
+import com.ilink.test.ilinkcheck.application.agent.orchestrator.phase.review.ReviewFixGeneratePhaseExecutor;
 import com.ilink.test.ilinkcheck.application.agent.feature.roadmap.RoadmapComposeService;
 import com.ilink.test.ilinkcheck.application.agent.orchestrator.phase.roadmap.RoadmapComposePhaseExecutor;
 import com.ilink.test.ilinkcheck.application.agent.orchestrator.phase.roadmap.RoadmapFetchPhaseExecutor;
@@ -25,6 +27,7 @@ import com.ilink.test.ilinkcheck.application.agent.spi.mcp.GitHubRepoProvider;
 import com.ilink.test.ilinkcheck.application.agent.spi.mcp.WebSearchProvider;
 import com.ilink.test.ilinkcheck.application.agent.spi.rag.StyleGuideRetriever;
 import com.ilink.test.ilinkcheck.application.tool.categories.translation.TranslationService;
+import com.ilink.test.ilinkcheck.infrastructure.document.DocumentExportService;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -108,6 +111,44 @@ class AgentLoopServiceTest {
         assertThat(secondReply).isPresent();
         assertThat(secondReply.get()).contains("技术文档审稿报告");
         assertThat(secondReply.get()).contains("具体建议");
+        assertThat(secondReply.get()).contains("需要我帮你发送修改好的稿件吗");
+    }
+
+    @Test
+    void shouldSendCorrectedDraftAfterConfirmation() {
+        AgentLoopService agentLoopService = createAgentLoopService();
+
+        agentLoopService.tryHandle("conv-10", "帮我审一下这篇博客");
+        agentLoopService.tryHandle("conv-10", """
+                使用redis缓存和Java8版本。
+
+                代码：
+                ```
+                INFO commandstats
+                ```
+                """);
+
+        Optional<String> reply = agentLoopService.tryHandle("conv-10", "好");
+
+        assertThat(reply).isPresent();
+        assertThat(reply.get()).contains("已按规范帮你优化稿件");
+        assertThat(reply.get()).contains("Redis 缓存");
+        assertThat(reply.get()).contains("Java8 版本");
+        assertThat(reply.get()).contains("```text");
+    }
+
+    @Test
+    void shouldSkipCorrectedDraftWhenUserRejects() {
+        AgentLoopService agentLoopService = createAgentLoopService();
+
+        agentLoopService.tryHandle("conv-11", "帮我审一下这篇博客");
+        agentLoopService.tryHandle("conv-11", "使用redis缓存和Java8版本。\n\n代码：\n```\nINFO commandstats\n```");
+
+        Optional<String> reply = agentLoopService.tryHandle("conv-11", "不用");
+
+        assertThat(reply).isPresent();
+        assertThat(reply.get()).contains("已跳过修改稿");
+        assertThat(reply.get()).doesNotContain("已按规范帮你优化稿件");
     }
 
     @Test
@@ -210,6 +251,8 @@ class AgentLoopServiceTest {
                 new ReviewSuggestion("术语", "全文", "检测到 `redis` 小写写法。", "建议统一写成 `Redis`。")
         );
 
+        DraftReviewService draftReviewService = new DraftReviewService(styleGuideRetriever, new DocumentExportService());
+
         List<PhaseExecutor> executors = List.of(
                 new GitHubFetchPhaseExecutor(gitHubRepoProvider),
                 new GitHubSummarizePhaseExecutor(),
@@ -217,7 +260,8 @@ class AgentLoopServiceTest {
                 new RoadmapComposePhaseExecutor(composeService),
                 new ReviewConfirmPhaseExecutor(),
                 new ReviewCollectDraftPhaseExecutor(),
-                new ReviewGeneratePhaseExecutor(styleGuideRetriever),
+                new DocReviewPhaseExecutor(draftReviewService),
+                new ReviewFixGeneratePhaseExecutor(draftReviewService),
                 new DigestCollectSchedulePhaseExecutor(),
                 new DigestComposePhaseExecutor(gitHubRepoProvider, devToArticleProvider)
         );

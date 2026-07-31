@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.regex.Pattern;
 
 /**
@@ -99,6 +100,40 @@ public class DraftReviewService {
     }
 
     /**
+     * 对草稿执行自动修复：补齐中英文/中数空格、为裸代码块补语言标记、修正术语大小写。
+     * 代码块内部（fenced code block）不参与空格与术语修复，避免破坏代码。
+     */
+    public String applyFixes(String draftText) {
+        if (draftText == null || draftText.isBlank()) {
+            return draftText;
+        }
+
+        StringBuilder sb = new StringBuilder();
+        String[] lines = draftText.split("\n", -1);
+        boolean inCodeBlock = false;
+        for (String line : lines) {
+            String trimmed = line.stripLeading();
+            if (trimmed.startsWith("```")) {
+                // 只给开头的裸代码块补语言标记，闭合围栏保持原样
+                if (!inCodeBlock && trimmed.matches("```\\s*")) {
+                    line = line.replaceFirst("```\\s*", "```text");
+                }
+                inCodeBlock = !inCodeBlock;
+                sb.append(line).append("\n");
+                continue;
+            }
+            if (inCodeBlock) {
+                sb.append(line).append("\n");
+                continue;
+            }
+            String fixed = fixTerminology(line);
+            fixed = fixSpacing(fixed);
+            sb.append(fixed).append("\n");
+        }
+        return sb.toString().stripTrailing();
+    }
+
+    /**
      * 将审稿报告格式化为用户可读文本。
      */
     public String formatReport(ReviewReport report) {
@@ -172,6 +207,40 @@ public class DraftReviewService {
             ));
         }
         return result;
+    }
+
+    /**
+     * 自动修复用的术语大小写映射。键为小写原形，值为规范写法。
+     */
+    private static final Map<String, String> TERM_FIX_CORRECTIONS = Map.ofEntries(
+            Map.entry("redis", "Redis"),
+            Map.entry("javascript", "JavaScript"),
+            Map.entry("typescript", "TypeScript"),
+            Map.entry("github", "GitHub"),
+            Map.entry("gitlab", "GitLab"),
+            Map.entry("macos", "macOS"),
+            Map.entry("ios", "iOS"),
+            Map.entry("api", "API")
+    );
+
+    /**
+     * 修复术语大小写：对术语做单词边界、大小写不敏感替换（redis → Redis）。
+     */
+    private String fixTerminology(String line) {
+        String fixed = line;
+        for (Map.Entry<String, String> entry : TERM_FIX_CORRECTIONS.entrySet()) {
+            fixed = fixed.replaceAll("(?i)\\b" + Pattern.quote(entry.getKey()) + "\\b", entry.getValue());
+        }
+        return fixed;
+    }
+
+    /**
+     * 修复中英文、中文与数字之间的空格（盘古之白）。
+     * 只处理 CJK 表意字符（\\u4e00-\\u9fff）与 ASCII 的贴合，不影响全角标点。
+     */
+    private String fixSpacing(String line) {
+        String fixed = line.replaceAll("([\\u4e00-\\u9fff])([A-Za-z0-9])", "$1 $2");
+        return fixed.replaceAll("([A-Za-z0-9])([\\u4e00-\\u9fff])", "$1 $2");
     }
 
     private List<ReviewSuggestion> checkTerminology(String text) {

@@ -14,6 +14,9 @@ import java.util.Map;
  * <p>
  * 负责在 {@link AgentPhase#REVIEW_GENERATE} 阶段调用 {@link DraftReviewService}
  * 对用户提交的技术文档草稿进行规范化审稿，并输出结构化的审稿报告。
+ * 报告输出后不立即结束，而是询问用户是否需要发送修改好的稿件，
+ * 由 {@link com.ilink.test.ilinkcheck.application.agent.orchestrator.phase.review.ReviewFixGeneratePhaseExecutor}
+ * 在 {@link AgentPhase#REVIEW_FIX_GENERATE} 阶段处理用户的确认结果。
  * </p>
  *
  * <p>该执行器是审稿主流程的核心阶段，前置阶段
@@ -53,9 +56,19 @@ public class DocReviewPhaseExecutor implements PhaseExecutor {
         ReviewReport report = draftReviewService.review(draftText);
         String formattedReport = draftReviewService.formatReport(report);
 
-        return PhaseExecutionResult.finish(formattedReport, Map.of(
-                AgentArtifacts.REVIEW_SUGGESTIONS, report.suggestions(),
-                AgentArtifacts.REVIEW_REPORT, report
-        ));
+        // 报告输出后暂停，询问用户是否需要发送修改好的稿件；
+        // 用户回复「好」后由 REVIEW_FIX_GENERATE 阶段生成修改稿，回复「不用」则跳过。
+        String reply = formattedReport
+                + "\n\n👉 需要我帮你发送修改好的稿件吗？回复「好」直接发送，回复「不用」跳过。";
+
+        return PhaseExecutionResult.waitForUser(
+                AgentPhase.REVIEW_FIX_GENERATE,
+                reply,
+                Map.of(
+                        AgentArtifacts.REQUEST_DRAFT, draftText,
+                        AgentArtifacts.REVIEW_SUGGESTIONS, report.suggestions(),
+                        AgentArtifacts.REVIEW_REPORT, report
+                )
+        );
     }
 }

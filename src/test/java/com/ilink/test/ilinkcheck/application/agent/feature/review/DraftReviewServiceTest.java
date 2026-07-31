@@ -272,6 +272,56 @@ class DraftReviewServiceTest {
         assertThat(report.suggestions().size()).isGreaterThanOrEqualTo(3);
     }
 
+    // ── 自动修复 applyFixes ──────────────────────────────────────
+
+    @Test
+    @DisplayName("applyFixes 修复空格、术语大小写与裸代码块")
+    void shouldApplyFixes() {
+        String draft = """
+                使用redis缓存和Java8版本。
+
+                代码：
+                ```
+                INFO commandstats
+                ```
+                """;
+
+        String fixed = service.applyFixes(draft);
+
+        assertThat(fixed).contains("Redis 缓存");
+        // 数字与中文之间补空格（Java8版本 → Java8 版本），字母与数字保持贴合
+        assertThat(fixed).contains("Java8 版本");
+        assertThat(fixed).contains("```text");
+        assertThat(fixed).doesNotContain("Redis缓存");
+        assertThat(fixed).doesNotContain("Java8版本");
+    }
+
+    @Test
+    @DisplayName("applyFixes 不修改代码块内部内容")
+    void shouldNotTouchCodeBlockContent() {
+        String draft = "示例：\n```java\nString redisKey = \"abc\";\n```";
+        String fixed = service.applyFixes(draft);
+
+        assertThat(fixed).contains("```java");
+        assertThat(fixed).contains("String redisKey = \"abc\";");
+    }
+
+    @Test
+    @DisplayName("applyFixes 不破坏已规范的文本")
+    void shouldKeepWellFormattedText() {
+        String draft = "使用 Redis 缓存可以提升性能，基于 JavaScript 和 TypeScript 开发。";
+        String fixed = service.applyFixes(draft);
+
+        assertThat(fixed).isEqualTo(draft);
+    }
+
+    @Test
+    @DisplayName("applyFixes 空输入原样返回")
+    void shouldReturnAsIsForBlank() {
+        assertThat(service.applyFixes("")).isEmpty();
+        assertThat(service.applyFixes(null)).isNull();
+    }
+
     // ── 导出功能 ─────────────────────────────────────────────────
 
     @Test
