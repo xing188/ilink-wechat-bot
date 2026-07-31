@@ -18,6 +18,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 
 /**
  * 技术路线业务逻辑层（人4 核心交付之一）。
@@ -67,14 +70,46 @@ public class RoadmapComposeService {
 
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
+    /** 路线缓存有效期：30 分钟。演示中同一主题二次提问、或后续「翻译成中文」都能直接命中。 */
+    private static final long PLAN_CACHE_TTL_MS = 30 * 60 * 1000L;
+
+    /** 缓存条目上限，超过后整体清空（演示/单机场景足够，避免引入额外依赖）。 */
+    private static final int PLAN_CACHE_MAX_SIZE = 64;
+
+    /**
+     * 主题 → 已编排路线 的进程内缓存。
+     * 关键收益：用户先问「我想学 RAG」再发「翻译成中文」时，第二次不必重新调用 LLM 编排，
+     * 直接复用上次的 plan，只做翻译，响应时间减半以上。
+     */
+    private final Map<String, CachedPlan> planCache = new ConcurrentHashMap<>();
+
+    /** 翻译最长等待时间（毫秒）。超时直接用英文原文回复，保证演示不卡死。 */
+    private long translateTimeoutMs = 20000;
+
+    @org.springframework.beans.factory.annotation.Value("${app.agent.translate-timeout-ms:20000}")
+    public void setTranslateTimeoutMs(long translateTimeoutMs) {
+        this.translateTimeoutMs = translateTimeoutMs;
+    }
+
     @Autowired(required = false)
     public void setTranslationService(TranslationService translationService) {
         this.translationService = translationService;
     }
 
+    /**
+     * 注入规划用 ChatClient。优先使用 {@code plannerChatClient}（快模型、低温、无记忆），
+     * 它比通用对话模型快数倍，是路线响应速度的关键。
+     */
     @Autowired(required = false)
-    public void setPlannerClient(@Qualifier("routingChatClient") ChatClient routingChatClient) {
-        this.plannerClient = routingChatClient;
+    public void setPlannerClient(@Qualifier("plannerChatClient") ChatClient plannerChatClient) {
+        this.plannerClient = plannerChatClient;
+    }
+
+    /** 缓存条目：已编排的路线 + 写入时间戳。 */
+    private record CachedPlan(RoadmapPlan plan, long timestampMs) {
+        boolean isFresh() {
+            return System.currentTimeMillis() - timestampMs < PLAN_CACHE_TTL_MS;
+        }
     }
 
     /**
@@ -138,14 +173,85 @@ public class RoadmapComposeService {
      * {@link #composeTemplate} 的写死模板，保证路线始终可用。</p>
      */
     public RoadmapPlan compose(String topic, List<DevToArticle> articles, List<SearchResult> references) {
+        // 缓存命中：同主题 30 分钟内直接复用，省掉一次 LLM 往返（后续「翻译成中文」的主要提速点）。
+        // 例外：缓存的 plan 没有推荐文章、而本次抓到了文章 → 说明上次抓取失败被缓存，跳过缓存重新编排。
+        String cacheKey = cacheKeyOf(topic);
+        CachedPlan cached = planCache.get(cacheKey);
+        boolean cachedMissingArticles = cached != null
+                && (cached.plan().recommendedArticles() == null || cached.plan().recommendedArticles().isEmpty())
+                && articles != null && !articles.isEmpty();
+        if (cached != null && cached.isFresh() && !cachedMissingArticles) {
+            log.info("[路线编排] 命中缓存，跳过 LLM 编排：{}", topic);
+            return cached.plan();
+        }
+
+        long startMs = System.currentTimeMillis();
+        RoadmapPlan plan;
         if (plannerClient != null) {
             try {
-                return composeWithLlm(topic, articles, references);
+                plan = composeWithLlm(topic, articles, references);
+                log.info("[路线编排] LLM 编排完成，耗时 {} ms", System.currentTimeMillis() - startMs);
             } catch (Exception e) {
                 log.warn("LLM 路线编排失败，退回模板兜底：{}", e.getMessage());
+                plan = composeTemplate(topic, articles);
             }
+        } else {
+            plan = composeTemplate(topic, articles);
         }
-        return composeTemplate(topic, articles);
+
+        cachePlan(cacheKey, plan);
+        return plan;
+    }
+
+    /**
+     * 一次性完成「编排 + 翻译 + 渲染」，其中翻译与 LLM 编排<b>并发</b>执行。
+     *
+     * <p>翻译的输入只有抓取到的资料，与 plan 无关，因此没有必要等编排结束再翻译。
+     * 并发后总耗时从「编排 + 翻译」变为「max(编排, 翻译)」，翻译场景下基本省掉一半时间。
+     * 翻译超时或失败一律回退英文原文，不影响路线正常返回。</p>
+     */
+    public String composeAndRender(String topic,
+                                   List<DevToArticle> articles,
+                                   List<SearchResult> references,
+                                   boolean translate) {
+        List<SearchResult> truncatedRefs = truncate(references, MAX_REFERENCES);
+        List<DevToArticle> truncatedArticles = truncate(articles, MAX_ARTICLES);
+
+        // 先把翻译任务丢到后台，紧接着在当前线程做 LLM 编排，两者重叠执行
+        CompletableFuture<Map<String, String>> translationFuture =
+                (translate && translationService != null)
+                        ? CompletableFuture.supplyAsync(() -> batchTranslateAll(truncatedArticles, truncatedRefs))
+                        : CompletableFuture.completedFuture(Map.of());
+
+        if (translate && translationService == null) {
+            log.warn("[路线渲染] translate=true 但 TranslationService 未注入，跳过翻译（检查 QwenTranslationService 是否被 Spring 扫描）");
+        }
+
+        RoadmapPlan plan = compose(topic, articles, references);
+
+        Map<String, String> translationMap;
+        try {
+            translationMap = translationFuture.get(translateTimeoutMs, TimeUnit.MILLISECONDS);
+        } catch (Exception e) {
+            translationFuture.cancel(true);
+            log.warn("[路线渲染] 翻译超时或失败（上限 {} ms），使用英文原文：{}",
+                    translateTimeoutMs, e.getClass().getSimpleName());
+            translationMap = Map.of();
+        }
+
+        return render(plan, truncatedRefs, translationMap);
+    }
+
+    /** 缓存键：主题去空格转小写，保证「RAG」「rag」「 Rag 」命中同一条。 */
+    private static String cacheKeyOf(String topic) {
+        return topic == null ? "" : topic.trim().toLowerCase();
+    }
+
+    private void cachePlan(String cacheKey, RoadmapPlan plan) {
+        if (planCache.size() >= PLAN_CACHE_MAX_SIZE) {
+            planCache.clear();
+        }
+        planCache.put(cacheKey, new CachedPlan(plan, System.currentTimeMillis()));
     }
 
     /**
@@ -291,7 +397,6 @@ public class RoadmapComposeService {
      * 则只显示标题（向后兼容旧数据）。</p>
      */
     public String render(RoadmapPlan plan, List<SearchResult> references, boolean translate) {
-        List<DevToArticle> articles = plan.recommendedArticles();
         // 截断：只取前 N 条，减少回复长度与翻译 API 耗时
         List<SearchResult> truncatedRefs = truncate(references, MAX_REFERENCES);
 
@@ -299,24 +404,38 @@ public class RoadmapComposeService {
         if (translate && translationService == null) {
             log.warn("[路线渲染] translate=true 但 TranslationService 未注入，跳过翻译（检查 QwenTranslationService 是否被 Spring 扫描）");
         }
-        Map<String, String> translationMap = (translate && translationService != null) ? batchTranslateAll(articles, truncatedRefs) : Map.of();
+        Map<String, String> translationMap = (translate && translationService != null)
+                ? batchTranslateAll(plan.recommendedArticles(), truncatedRefs)
+                : Map.of();
 
         // 诊断：翻译请求了但映射为空 → API 调用失败，记录日志
         if (translate && translationService != null && translationMap.isEmpty()) {
             log.warn("[路线渲染] ⚠️ 翻译请求已发出但返回空映射！检查上方 [翻译] 日志确认 API 是否报错");
         }
 
+        return render(plan, truncatedRefs, translationMap);
+    }
+
+    /**
+     * 用已经准备好的「原文 → 译文」映射渲染回复。翻译已在别处（可能是并发任务）完成，
+     * 这里只做纯字符串拼装，不再触发任何网络调用。映射为空即全部使用原文。
+     */
+    public String render(RoadmapPlan plan, List<SearchResult> references, Map<String, String> translationMap) {
+        List<DevToArticle> articles = plan.recommendedArticles();
+        List<SearchResult> truncatedRefs = truncate(references, MAX_REFERENCES);
+        Map<String, String> safeMap = translationMap == null ? Map.of() : translationMap;
+
         String articleText = (articles == null || articles.isEmpty())
                 ? "- 暂无 Dev.to 推荐文章"
                 : articles.stream()
-                .map(a -> formatArticleLine(a, translationMap))
+                .map(a -> formatArticleLine(a, safeMap))
                 .reduce((a, b) -> a + System.lineSeparator() + b)
                 .orElse("- 暂无 Dev.to 推荐文章");
 
         String referenceText = (truncatedRefs == null || truncatedRefs.isEmpty())
                 ? "- 暂无补充检索结果"
                 : truncatedRefs.stream()
-                .map(r -> formatReferenceLine(r, translationMap))
+                .map(r -> formatReferenceLine(r, safeMap))
                 .reduce((a, b) -> a + System.lineSeparator() + b)
                 .orElse("- 暂无补充检索结果");
 

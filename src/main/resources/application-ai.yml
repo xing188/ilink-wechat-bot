@@ -15,6 +15,18 @@ spring:
       api-key: ${ALIYUN_API_KEY}
 
 app:
+  agent:
+    # 学习路线规划 / 资料翻译专用的「快模型」。
+    # 这两类任务输出短、结构固定，用小模型可把耗时从 15~30s 压到 3~5s。
+    # 若账号未开通 qwen-flash，改成 qwen-turbo 或 qwen3.7-plus 即可（功能不受影响，只是慢）。
+    fast-model: "qwen-flash"
+    fast-max-tokens: 1500
+    fast-temperature: 0.2
+    # 抓取阶段（Dev.to / WebSearch）单个来源的最长等待时间，超时按空结果处理，不拖累整体回复。
+    fetch-timeout-ms: 6000
+    # 翻译最长等待时间，超时直接用英文原文回复，保证演示不卡死。
+    translate-timeout-ms: 20000
+
   tts:
     model: "cosyvoice-v3-flash"
     voice: "longanyang"

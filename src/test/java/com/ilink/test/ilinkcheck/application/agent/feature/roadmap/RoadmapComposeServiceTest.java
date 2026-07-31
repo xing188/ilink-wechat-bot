@@ -284,4 +284,78 @@ class RoadmapComposeServiceTest {
 
         assertThat(plan.prerequisites()).anyMatch(s -> s.description().contains("掌握变量"));
     }
+
+    @Test
+    void composeReusesCachedPlanForSameTopic() {
+        // 性能优化：同一主题重复编排（如后续「翻译成中文」）应命中缓存，不再调用 LLM
+        java.util.concurrent.atomic.AtomicInteger llmCalls = new java.util.concurrent.atomic.AtomicInteger();
+        RoadmapComposeService svc = new RoadmapComposeService() {
+            @Override
+            protected RoadmapPlanDto generatePlanDto(String topic, String context) {
+                llmCalls.incrementAndGet();
+                RoadmapPlanDto dto = new RoadmapPlanDto();
+                dto.coreConcepts = List.of(new RoadmapPlanDto.StepDto("缓存测试步骤", "只应生成一次"));
+                return dto;
+            }
+        };
+        svc.setPlannerClient(mock(ChatClient.class));
+
+        RoadmapPlan first = svc.compose("RAG", List.of(), List.of());
+        RoadmapPlan second = svc.compose("  rag  ", List.of(), List.of()); // 大小写/空格不敏感
+
+        assertThat(llmCalls.get()).isEqualTo(1);
+        assertThat(second).isSameAs(first);
+    }
+
+    @Test
+    void composeAndRenderAppliesTranslationConcurrently() {
+        // composeAndRender 应并发完成翻译并把译文渲染进回复
+        RoadmapComposeService svc = new RoadmapComposeService();
+        svc.setTranslationService(new TranslationService() {
+            @Override
+            public String translate(String text, String src, String tgt) {
+                return "【译】" + text;
+            }
+
+            @Override
+            public List<String> batchTranslate(List<String> texts, String src, String tgt) {
+                return texts.stream().map(t -> "【译】" + t).toList();
+            }
+        });
+
+        List<DevToArticle> articles = List.of(
+                new DevToArticle("Intro to RAG", "https://dev.to/x", "rag", 100, "A short guide")
+        );
+
+        String reply = svc.composeAndRender("RAG-concurrent", articles, List.of(), true);
+
+        assertThat(reply).contains("【译】Intro to RAG");
+        assertThat(reply).contains("【译】A short guide");
+    }
+
+    @Test
+    void composeAndRenderKeepsOriginalWhenTranslateDisabled() {
+        // translate=false 时不触发任何翻译，直接渲染原文
+        RoadmapComposeService svc = new RoadmapComposeService();
+        svc.setTranslationService(new TranslationService() {
+            @Override
+            public String translate(String text, String src, String tgt) {
+                return "【译】" + text;
+            }
+
+            @Override
+            public List<String> batchTranslate(List<String> texts, String src, String tgt) {
+                throw new AssertionError("translate=false 时不应调用翻译服务");
+            }
+        });
+
+        List<DevToArticle> articles = List.of(
+                new DevToArticle("Intro to RAG", "https://dev.to/x", "rag", 100, "A short guide")
+        );
+
+        String reply = svc.composeAndRender("RAG-no-translate", articles, List.of(), false);
+
+        assertThat(reply).contains("Intro to RAG");
+        assertThat(reply).doesNotContain("【译】");
+    }
 }
