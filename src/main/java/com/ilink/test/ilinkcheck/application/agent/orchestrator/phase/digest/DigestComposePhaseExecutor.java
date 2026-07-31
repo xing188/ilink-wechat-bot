@@ -48,7 +48,8 @@ public class DigestComposePhaseExecutor implements PhaseExecutor {
         String repoText = digestContent.trendingRepos().isEmpty()
                 ? "- 暂无 GitHub 热点"
                 : digestContent.trendingRepos().stream()
-                .map(item -> "- " + item.owner() + "/" + item.name() + "："
+                .map(item -> "- " + item.owner() + "/" + item.name()
+                        + "（" + item.formattedStarMetric() + (item.isFallbackMetric() ? "，官方回退" : "") + "）："
                         + defaultText(item.description(), "暂无描述"))
                 .reduce((a, b) -> a + System.lineSeparator() + b)
                 .orElse("- 暂无 GitHub 热点");

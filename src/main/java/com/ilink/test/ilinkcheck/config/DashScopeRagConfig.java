@@ -23,14 +23,12 @@ public class DashScopeRagConfig {
     @Value("${spring.ai.dashscope.api-key}")
     private String apiKey;
 
-
     @Value("${spring.ai.openai.base-url}")
     private String baseUrl;
 
     @Value("${spring.ai.openai.embedding.model:text-embedding-v3}")
     private String embeddingModel;
 
-    //HTTP通信客户端
     @Bean
     public DashScopeApi dashScopeApi() {
         return DashScopeApi.builder()

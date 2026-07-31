@@ -105,9 +105,11 @@ public class TextMessageProcessor {
             return ReplyMode.TEXT;
         }
         String content = result.content();
-        // 路线类输出特征：包含"第一阶段"或"学习路线"等结构化标记
+        // 路线/审稿类结构化输出：包含"第一阶段"、"学习路线"、"技术文档审稿报告"或修改稿标记，
+        // 用户需要在聊天窗口内直接阅读，不适合转为 Word 文档
         if (content.contains("第一阶段") || content.contains("学习路线")
-                || content.contains("技术文档审稿报告")) {
+                || content.contains("技术文档审稿报告")
+                || content.contains("已按规范帮你优化稿件")) {
             return ReplyMode.FORCE_TEXT;
         }
         return ReplyMode.TEXT;
