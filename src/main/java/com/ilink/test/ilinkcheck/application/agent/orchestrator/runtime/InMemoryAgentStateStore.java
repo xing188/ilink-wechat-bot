@@ -1,6 +1,7 @@
 package com.ilink.test.ilinkcheck.application.agent.orchestrator.runtime;
 
 import com.ilink.test.ilinkcheck.application.agent.orchestrator.model.AgentState;
+import com.ilink.test.ilinkcheck.application.agent.orchestrator.model.AgentTaskType;
 import org.springframework.stereotype.Service;
 
 import java.util.Optional;
@@ -18,7 +19,12 @@ public class InMemoryAgentStateStore implements AgentStateStore {
     @Override
     public Optional<AgentState> findActive(String conversationId) {
         AgentState state = stateMap.get(conversationId);
-        if (state == null || state.isFinished()) {
+        if (state == null) {
+            return Optional.empty();
+        }
+        // 已完成的技术路线工作流需保留，以支持后续“翻译成中文”重渲染指令；
+        // 其它工作流完成后即视为非活跃。
+        if (state.isFinished() && state.getTaskType() != AgentTaskType.TECH_ROADMAP) {
             return Optional.empty();
         }
         return Optional.of(state);
@@ -29,7 +35,7 @@ public class InMemoryAgentStateStore implements AgentStateStore {
         if (state == null) {
             return;
         }
-        if (state.isFinished()) {
+        if (state.isFinished() && state.getTaskType() != AgentTaskType.TECH_ROADMAP) {
             stateMap.remove(state.getConversationId());
             return;
         }

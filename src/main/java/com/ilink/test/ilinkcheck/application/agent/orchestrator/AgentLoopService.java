@@ -1,13 +1,16 @@
 package com.ilink.test.ilinkcheck.application.agent.orchestrator;
 
+import com.ilink.test.ilinkcheck.application.agent.orchestrator.model.AgentArtifacts;
 import com.ilink.test.ilinkcheck.application.agent.orchestrator.model.AgentState;
 import com.ilink.test.ilinkcheck.application.agent.orchestrator.model.AgentTaskType;
+import com.ilink.test.ilinkcheck.application.agent.orchestrator.model.AgentPhase;
 import com.ilink.test.ilinkcheck.application.agent.orchestrator.model.PhaseExecutionResult;
 import com.ilink.test.ilinkcheck.application.agent.orchestrator.model.PhaseExecutor;
 import com.ilink.test.ilinkcheck.application.agent.orchestrator.routing.IntentRouter;
 import com.ilink.test.ilinkcheck.application.agent.orchestrator.runtime.AgentStateStore;
 import com.ilink.test.ilinkcheck.application.agent.orchestrator.runtime.PhaseExecutorRegistry;
 import com.ilink.test.ilinkcheck.application.agent.orchestrator.runtime.WorkflowTemplateRegistry;
+import com.ilink.test.ilinkcheck.application.agent.orchestrator.support.AgentTextUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -68,40 +71,66 @@ public class AgentLoopService {
 
         Optional<AgentState> existingState = agentStateStore.findActive(normalizedConversationId);
         if (existingState.isPresent()) {
-            return Optional.of(resumeWorkflow(existingState.get(), normalizedUserMessage));
+            return Optional.of(resumeWorkflow(existingState.get(), normalizedConversationId, normalizedUserMessage));
         }
 
-        Optional<AgentTaskType> taskType = intentRouter.route(normalizedUserMessage);
-        if (taskType.isEmpty()) {
-            log.info("无法识别当前意图，已进入普通对话。");
-            return Optional.empty();
-        }
-
-        AgentState state = AgentState.newWorkflow(
-                normalizedConversationId,
-                taskType.get(),
-                workflowTemplateRegistry.startPhase(taskType.get()),
-                normalizedUserMessage
-        );
-        log.info("conversationId={}, agentTaskType={}, workflowEvent=start",
-                normalizedConversationId, taskType.get());
-
-        return Optional.of(runWorkflow(state));
+        return Optional.ofNullable(startNewWorkflow(normalizedConversationId, normalizedUserMessage));
     }
 
     /**
-     * 恢复已暂停的工作流
-     * 用户在流程等待输入时发送新消息，触发该方法
-     * @param state 持久化的会话状态
-     * @param userMessage 用户最新输入文本
-     * @return 工作流执行后的回复
+     * 按路由结果开启一条全新的工作流；若消息不属于任何 Agent 任务则返回 null（交给外层处理）。
      */
-    private String resumeWorkflow(AgentState state, String userMessage) {
+    private String startNewWorkflow(String conversationId, String userMessage) {
+        Optional<AgentTaskType> taskType = intentRouter.route(userMessage);
+        if (taskType.isEmpty()) {
+            return null;
+        }
+
+        AgentState state = AgentState.newWorkflow(
+                conversationId,
+                taskType.get(),
+                workflowTemplateRegistry.startPhase(taskType.get()),
+                userMessage
+        );
+        log.info("conversationId={}, agentTaskType={}, workflowEvent=start", conversationId, taskType.get());
+
+        return runWorkflow(state);
+    }
+
+    /**
+     * 继续执行已经进入等待态、或已完成（如技术路线）的工作流。
+     */
+    private String resumeWorkflow(AgentState state, String conversationId, String userMessage) {
         if (isCancelCommand(userMessage)) {
             agentStateStore.remove(state.getConversationId());
             log.info("conversationId={}, agentTaskType={}, workflowEvent=cancel",
                     state.getConversationId(), state.getTaskType());
             return "已取消当前 Agent 工作流。";
+        }
+
+        // 后续指令：把已生成的技术路线翻译成中文版（复用上次取到的资料重新渲染）
+        if (AgentTextUtils.wantsChinese(userMessage)) {
+            state.putArtifact(AgentArtifacts.ROADMAP_TRANSLATE, true);
+            state.updateLatestUserMessage(userMessage);
+            state.clearWaitingUserInput();
+            state.moveToPhase(AgentPhase.ROADMAP_COMPOSE);
+            log.info("conversationId={}, agentTaskType={}, workflowEvent=translate",
+                    state.getConversationId(), state.getTaskType());
+            return runWorkflow(state);
+        }
+
+        // 新的学习请求：丢弃旧工作流，开启一条新路线
+        if (AgentTextUtils.extractTopic(userMessage).isPresent()) {
+            agentStateStore.remove(state.getConversationId());
+            log.info("conversationId={}, agentTaskType={}, workflowEvent=restart",
+                    state.getConversationId(), state.getTaskType());
+            String fresh = startNewWorkflow(conversationId, userMessage);
+            return fresh != null ? fresh : "已重新开始，请告诉我你想学的技术主题。";
+        }
+
+        // 已完成的工作流收到无关消息：给出友好提示，避免误入 FINISH 阶段执行器
+        if (state.isFinished()) {
+            return "上一条学习路线已生成完毕。回复“翻译成中文”可切换为中文版，或发送新的“我想学 X”开始新路线。";
         }
 
         state.updateLatestUserMessage(userMessage);
@@ -125,7 +154,11 @@ public class AgentLoopService {
 
             if (result.finished()) {
                 state.markFinished(result.replyToUser());
-                agentStateStore.remove(state.getConversationId());
+                // 技术路线完成后保留状态，以支持后续“翻译成中文”重渲染指令；
+                // 其它工作流完成后即从存储中移除。
+                if (state.getTaskType() != AgentTaskType.TECH_ROADMAP) {
+                    agentStateStore.remove(state.getConversationId());
+                }
                 log.info("conversationId={}, agentTaskType={}, workflowEvent=finish, rounds={}",
                         state.getConversationId(), state.getTaskType(), state.getExecutionRound());
                 return state.getFinalReply();
