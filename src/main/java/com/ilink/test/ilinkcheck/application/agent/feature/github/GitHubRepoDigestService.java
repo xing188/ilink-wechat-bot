@@ -171,7 +171,7 @@ public class GitHubRepoDigestService {
             if (StringUtils.hasText(r.description())) {
                 sj.add("   " + r.description());
             }
-            sj.add("   ⭐ " + r.starsToday() + " today");
+            sj.add("   ⭐ " + r.formattedStarMetric() + (r.isFallbackMetric() ? "（官方回退）" : ""));
             sj.add("");
         }
         return sj.toString();

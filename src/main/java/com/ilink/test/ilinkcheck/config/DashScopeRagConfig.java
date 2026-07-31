@@ -11,28 +11,12 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-/**
- * RAG向量库配置类
- * 适配阿里云DashScope（通义千问）Embedding接口
- * 关键点：DashScope兼容OpenAI协议，所以直接复用SpringAI OpenAi系列客户端
- * 向量存储：SimpleVectorStore【内存向量库】
- */
 @Configuration
 public class DashScopeRagConfig {
 
     @Value("${spring.ai.dashscope.api-key}")
     private String apiKey;
 
-<<<<<<< HEAD
-=======
-    @Value("${spring.ai.openai.base-url}")
-    private String baseUrl;
-
-    @Value("${spring.ai.openai.embedding.model:text-embedding-v3}")
-    private String embeddingModel;
-
-    //HTTP通信客户端
->>>>>>> 0cb2dbe7f5c35121edd09e680efef0c3e0c75dc1
     @Bean
     public DashScopeApi dashScopeApi() {
         return DashScopeApi.builder()
@@ -41,7 +25,6 @@ public class DashScopeRagConfig {
                 .build();
     }
 
-    //文本向量化能力
     @Bean
     public DashScopeEmbeddingModel dashScopeEmbeddingModel(DashScopeApi dashScopeApi) {
         DashScopeEmbeddingOptions options = DashScopeEmbeddingOptions.builder()
