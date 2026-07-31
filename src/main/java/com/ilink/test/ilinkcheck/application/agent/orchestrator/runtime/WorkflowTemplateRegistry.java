@@ -37,7 +37,7 @@ public class WorkflowTemplateRegistry {
     private void registerAllTaskStartPhase() {
         startPhases.put(AgentTaskType.GITHUB_REPO_DIGEST, AgentPhase.GITHUB_FETCH);
         startPhases.put(AgentTaskType.TECH_ROADMAP, AgentPhase.ROADMAP_FETCH);
-        startPhases.put(AgentTaskType.DOC_REVIEW, AgentPhase.REVIEW_RETRIEVE_GUIDE);
+        startPhases.put(AgentTaskType.DOC_REVIEW, AgentPhase.REVIEW_CONFIRM);
         startPhases.put(AgentTaskType.DAILY_DIGEST_SUBSCRIBE, AgentPhase.DIGEST_FETCH);
         log.info("WorkflowTemplateRegistry init, registered task count:{}", startPhases.size());
     }
