@@ -11,6 +11,7 @@ import com.ilink.test.ilinkcheck.application.agent.orchestrator.phase.digest.Dig
 import com.ilink.test.ilinkcheck.application.agent.orchestrator.phase.github.GitHubFetchPhaseExecutor;
 import com.ilink.test.ilinkcheck.application.agent.orchestrator.phase.github.GitHubSummarizePhaseExecutor;
 import com.ilink.test.ilinkcheck.application.agent.orchestrator.phase.review.ReviewCollectDraftPhaseExecutor;
+import com.ilink.test.ilinkcheck.application.agent.orchestrator.phase.review.ReviewConfirmPhaseExecutor;
 import com.ilink.test.ilinkcheck.application.agent.orchestrator.phase.review.ReviewGeneratePhaseExecutor;
 import com.ilink.test.ilinkcheck.application.agent.feature.roadmap.RoadmapComposeService;
 import com.ilink.test.ilinkcheck.application.agent.orchestrator.phase.roadmap.RoadmapComposePhaseExecutor;
@@ -213,6 +214,7 @@ class AgentLoopServiceTest {
                 new GitHubSummarizePhaseExecutor(),
                 new RoadmapFetchPhaseExecutor(devToArticleProvider, webSearchProvider),
                 new RoadmapComposePhaseExecutor(composeService),
+                new ReviewConfirmPhaseExecutor(),
                 new ReviewCollectDraftPhaseExecutor(),
                 new ReviewGeneratePhaseExecutor(styleGuideRetriever),
                 new DigestCollectSchedulePhaseExecutor(),

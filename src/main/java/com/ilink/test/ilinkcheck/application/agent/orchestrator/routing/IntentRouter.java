@@ -1,6 +1,7 @@
 package com.ilink.test.ilinkcheck.application.agent.orchestrator.routing;
 
 import com.ilink.test.ilinkcheck.application.agent.orchestrator.model.AgentTaskType;
+import com.ilink.test.ilinkcheck.application.agent.orchestrator.support.AgentTextUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -52,6 +53,10 @@ public class IntentRouter {
         // 优先级4：晨报订阅
         if (containsAny(text, DIGEST_HINTS)) {
             return Optional.of(AgentTaskType.DAILY_DIGEST_SUBSCRIBE);
+        }
+        // 优先级5：长文本文章兜底 —— 用户直接贴了文章/代码/草稿，先确认是否需要审稿
+        if (AgentTextUtils.extractDraftText(text).isPresent()) {
+            return Optional.of(AgentTaskType.DOC_REVIEW);
         }
 
         return Optional.empty();
