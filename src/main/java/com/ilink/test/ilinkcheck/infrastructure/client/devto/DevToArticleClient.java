@@ -20,7 +20,10 @@ public class DevToArticleClient implements DevToArticleProvider {
     private final RestClient restClient;
 
     public DevToArticleClient(RestClient.Builder restClientBuilder) {
-        this.restClient = restClientBuilder.baseUrl(BASE_URL).build();
+        this.restClient = restClientBuilder
+                .baseUrl(BASE_URL)
+                .defaultHeader("User-Agent", "TechPilot-Bot/1.0 (ilink-wechat-bot)")
+                .build();
     }
 
     @Override
