@@ -5,3 +5,8 @@ app:
     serpapi-key: ${SERPAPI_API_KEY:""}
   book:
     douban-api-key: REPLACE_WITH_DOUBANAPI_KEY
+  github:
+    enabled: true
+    api-base: "https://api.github.com"
+    token: ${GITHUB_TOKEN:""}
+    trending-api-url: "https://github-trending-api.vercel.app"
