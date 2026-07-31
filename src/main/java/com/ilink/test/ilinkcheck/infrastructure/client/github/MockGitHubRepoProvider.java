@@ -57,11 +57,11 @@ public class MockGitHubRepoProvider implements GitHubRepoProvider {
     @Override
     public List<TrendingRepo> fetchTrending(String language, String since) {
         return List.of(
-                new TrendingRepo("microsoft", "vscode", "Visual Studio Code - Open Source IDE", "TypeScript", 250, "https://github.com/microsoft/vscode"),
-                new TrendingRepo("facebook", "react", "A declarative, efficient, and flexible JavaScript library for building user interfaces.", "JavaScript", 180, "https://github.com/facebook/react"),
-                new TrendingRepo("torvalds", "linux", "Linux kernel source tree", "C", 150, "https://github.com/torvalds/linux"),
-                new TrendingRepo("tailwindlabs", "tailwindcss", "A utility-first CSS framework for rapid UI development.", "JavaScript", 120, "https://github.com/tailwindlabs/tailwindcss"),
-                new TrendingRepo("rust-lang", "rust", "Empowering everyone to build reliable and efficient software.", "Rust", 100, "https://github.com/rust-lang/rust")
+                new TrendingRepo("microsoft", "vscode", "Visual Studio Code - Open Source IDE", "TypeScript", 250, "https://github.com/microsoft/vscode", TrendingRepo.MetricType.DAILY_STARS, TrendingRepo.Source.MOCK),
+                new TrendingRepo("facebook", "react", "A declarative, efficient, and flexible JavaScript library for building user interfaces.", "JavaScript", 180, "https://github.com/facebook/react", TrendingRepo.MetricType.DAILY_STARS, TrendingRepo.Source.MOCK),
+                new TrendingRepo("torvalds", "linux", "Linux kernel source tree", "C", 150, "https://github.com/torvalds/linux", TrendingRepo.MetricType.DAILY_STARS, TrendingRepo.Source.MOCK),
+                new TrendingRepo("tailwindlabs", "tailwindcss", "A utility-first CSS framework for rapid UI development.", "JavaScript", 120, "https://github.com/tailwindlabs/tailwindcss", TrendingRepo.MetricType.DAILY_STARS, TrendingRepo.Source.MOCK),
+                new TrendingRepo("rust-lang", "rust", "Empowering everyone to build reliable and efficient software.", "Rust", 100, "https://github.com/rust-lang/rust", TrendingRepo.MetricType.DAILY_STARS, TrendingRepo.Source.MOCK)
         );
     }
 }

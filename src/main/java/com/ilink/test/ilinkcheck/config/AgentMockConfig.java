@@ -49,7 +49,9 @@ public class AgentMockConfig {
                                 "Spring 生态下的 AI 应用开发框架。",
                                 "Java",
                                 320,
-                                "https://github.com/spring-projects/spring-ai"
+                                "https://github.com/spring-projects/spring-ai",
+                                TrendingRepo.MetricType.DAILY_STARS,
+                                TrendingRepo.Source.MOCK
                         ),
                         new TrendingRepo(
                                 "langchain-ai",
@@ -57,7 +59,9 @@ public class AgentMockConfig {
                                 "面向多 Agent 工作流的图式编排框架。",
                                 "Python",
                                 280,
-                                "https://github.com/langchain-ai/langgraph"
+                                "https://github.com/langchain-ai/langgraph",
+                                TrendingRepo.MetricType.DAILY_STARS,
+                                TrendingRepo.Source.MOCK
                         )
                 );
             }

@@ -122,6 +122,7 @@ class AgentLoopServiceTest {
         assertThat(secondReply).isPresent();
         assertThat(secondReply.get()).contains("已为你记录技术晨报订阅时间：08:30");
         assertThat(secondReply.get()).contains("晨报预览");
+        assertThat(secondReply.get()).contains("今日新增 Star");
     }
 
     @Test
@@ -188,8 +189,8 @@ class AgentLoopServiceTest {
             @Override
             public List<TrendingRepo> fetchTrending(String language, String since) {
                 return List.of(
-                        new TrendingRepo("spring-projects", "spring-ai", "Spring 生态下的 AI 应用开发框架。", "Java", 320, "https://github.com/spring-projects/spring-ai"),
-                        new TrendingRepo("langchain-ai", "langgraph", "面向多 Agent 工作流的图式编排框架。", "Python", 280, "https://github.com/langchain-ai/langgraph")
+                        new TrendingRepo("spring-projects", "spring-ai", "Spring 生态下的 AI 应用开发框架。", "Java", 320, "https://github.com/spring-projects/spring-ai", TrendingRepo.MetricType.DAILY_STARS, TrendingRepo.Source.MOCK),
+                        new TrendingRepo("langchain-ai", "langgraph", "面向多 Agent 工作流的图式编排框架。", "Python", 280, "https://github.com/langchain-ai/langgraph", TrendingRepo.MetricType.DAILY_STARS, TrendingRepo.Source.MOCK)
                 );
             }
         };

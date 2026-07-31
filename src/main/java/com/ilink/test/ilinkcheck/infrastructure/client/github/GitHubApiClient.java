@@ -14,13 +14,15 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientResponseException;
 
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.Base64;
 import java.util.Collections;
 import java.util.List;
 
 @Component
-@ConditionalOnProperty(prefix = "app.github", name = "enabled", havingValue = "true", matchIfMissing = true)
+@ConditionalOnProperty(prefix = "app.github", name = "enabled", havingValue = "true")
 public class GitHubApiClient implements GitHubRepoProvider {
 
     private static final Logger log = LoggerFactory.getLogger(GitHubApiClient.class);
@@ -28,13 +30,11 @@ public class GitHubApiClient implements GitHubRepoProvider {
 
     private final RestClient restClient;
     private final RestClient trendingClient;
-    private final String trendingApiUrl;
 
     public GitHubApiClient(RestClient.Builder restClientBuilder,
                            @Value("${app.github.api-base:https://api.github.com}") String apiBase,
                            @Value("${app.github.token:}") String token,
                            @Value("${app.github.trending-api-url:}") String trendingApiUrl) {
-        // GitHub REST API client
         RestClient.Builder builder = restClientBuilder.baseUrl(trimTrailingSlash(apiBase));
         if (StringUtils.hasText(token)) {
             builder = builder.defaultHeader("Authorization", "Bearer " + token);
@@ -44,16 +44,12 @@ public class GitHubApiClient implements GitHubRepoProvider {
                 .defaultHeader("User-Agent", "ilink-wechat-bot/1.0")
                 .build();
 
-        // Trending API client (community github-trending-api)
-        this.trendingApiUrl = trendingApiUrl;
-        if (StringUtils.hasText(trendingApiUrl)) {
-            this.trendingClient = restClientBuilder
-                    .baseUrl(trimTrailingSlash(trendingApiUrl))
-                    .defaultHeader("User-Agent", "ilink-wechat-bot/1.0")
-                    .build();
-        } else {
-            this.trendingClient = null;
-        }
+        this.trendingClient = StringUtils.hasText(trendingApiUrl)
+                ? restClientBuilder
+                .baseUrl(trimTrailingSlash(trendingApiUrl))
+                .defaultHeader("User-Agent", "ilink-wechat-bot/1.0")
+                .build()
+                : null;
     }
 
     @Override
@@ -72,9 +68,6 @@ public class GitHubApiClient implements GitHubRepoProvider {
                         "GitHub API returned empty body");
             }
 
-            String readmeSummary = fetchReadmeSummary(owner, repo);
-            String techStack = detectTechStack(response.language(), response.topics());
-
             return new RepoInfo(
                     response.owner() != null ? response.owner().login() : owner,
                     response.name(),
@@ -82,8 +75,8 @@ public class GitHubApiClient implements GitHubRepoProvider {
                     response.language(),
                     response.stars(),
                     response.forks(),
-                    readmeSummary,
-                    techStack
+                    fetchReadmeSummary(owner, repo),
+                    detectTechStack(response.language(), response.topics())
             );
         } catch (RestClientResponseException e) {
             throw translateException("fetchRepo", e);
@@ -92,19 +85,17 @@ public class GitHubApiClient implements GitHubRepoProvider {
 
     @Override
     public List<TrendingRepo> fetchTrending(String language, String since) {
-        // 优先使用社区 github-trending-api（结果更接近 GitHub Trending 页面）
         if (trendingClient != null) {
             try {
-                return fetchTrendingFromApi(language, since);
+                return fetchTrendingFromCommunityApi(language, since);
             } catch (Exception e) {
-                log.warn("Trending API failed, falling back to Search API: {}", e.getMessage());
+                log.warn("Community trending API failed, fallback to official search API", e);
             }
         }
-        // 降级：使用 GitHub Search API
         return fetchTrendingFromSearch(language, since);
     }
 
-    private List<TrendingRepo> fetchTrendingFromApi(String language, String since) {
+    private List<TrendingRepo> fetchTrendingFromCommunityApi(String language, String since) {
         ApiTrendingItem[] items = trendingClient.get()
                 .uri(uriBuilder -> {
                     var builder = uriBuilder.path("/repositories");
@@ -125,12 +116,14 @@ public class GitHubApiClient implements GitHubRepoProvider {
 
         return List.of(items).stream()
                 .map(item -> new TrendingRepo(
-                        parseOwner(item.url()),
+                        StringUtils.hasText(item.author()) ? item.author() : parseOwner(item.url()),
                         item.name(),
                         item.description(),
                         item.language(),
                         item.starsToday(),
-                        item.url()
+                        item.url(),
+                        TrendingRepo.MetricType.DAILY_STARS,
+                        TrendingRepo.Source.COMMUNITY_TRENDING_API
                 ))
                 .toList();
     }
@@ -172,7 +165,9 @@ public class GitHubApiClient implements GitHubRepoProvider {
                             item.description(),
                             item.language(),
                             item.stars(),
-                            item.htmlUrl()
+                            item.htmlUrl(),
+                            TrendingRepo.MetricType.TOTAL_STARS,
+                            TrendingRepo.Source.GITHUB_SEARCH_API
                     ))
                     .toList();
         } catch (RestClientResponseException e) {
@@ -189,8 +184,9 @@ public class GitHubApiClient implements GitHubRepoProvider {
             if (readmeResp == null || !StringUtils.hasText(readmeResp.content())) {
                 return "";
             }
-            byte[] decoded = java.util.Base64.getDecoder().decode(readmeResp.content());
-            String text = new String(decoded, java.nio.charset.StandardCharsets.UTF_8);
+
+            byte[] decoded = Base64.getMimeDecoder().decode(readmeResp.content());
+            String text = new String(decoded, StandardCharsets.UTF_8);
             String[] lines = text.split("\n");
             StringBuilder summary = new StringBuilder();
             for (String line : lines) {
@@ -207,6 +203,7 @@ public class GitHubApiClient implements GitHubRepoProvider {
             String result = summary.toString().strip();
             return result.length() > 300 ? result.substring(0, 300) + "..." : result;
         } catch (Exception e) {
+            log.warn("Failed to decode README summary for repo={}/{}", owner, repo, e);
             return "";
         }
     }
@@ -228,9 +225,10 @@ public class GitHubApiClient implements GitHubRepoProvider {
         return sb.toString();
     }
 
-    /** 从 repo URL 中解析 owner: "https://github.com/owner/repo" → "owner" */
     private String parseOwner(String url) {
-        if (!StringUtils.hasText(url)) return "unknown";
+        if (!StringUtils.hasText(url)) {
+            return "unknown";
+        }
         String[] parts = url.replace("https://github.com/", "").split("/");
         return parts.length > 0 ? parts[0] : "unknown";
     }
@@ -255,58 +253,67 @@ public class GitHubApiClient implements GitHubRepoProvider {
     }
 
     private String trimTrailingSlash(String value) {
-        if (value == null) return null;
+        if (value == null) {
+            return null;
+        }
         return value.endsWith("/") ? value.substring(0, value.length() - 1) : value;
     }
 
-    // --- GitHub REST API response DTOs ---
-
     @JsonIgnoreProperties(ignoreUnknown = true)
     private record ApiRepoResponse(
-            Long id, String name,
+            Long id,
+            String name,
             @JsonProperty("full_name") String fullName,
-            Owner owner, String description, String language,
+            Owner owner,
+            String description,
+            String language,
             @JsonProperty("stargazers_count") int stars,
             @JsonProperty("forks_count") int forks,
             @JsonProperty("html_url") String htmlUrl,
-            List<String> topics) {}
+            List<String> topics
+    ) {}
 
     @JsonIgnoreProperties(ignoreUnknown = true)
     private record Owner(String login, Long id) {}
 
     @JsonIgnoreProperties(ignoreUnknown = true)
-    private record ApiReadmeResponse(String content, String encoding,
-                                     @JsonProperty("download_url") String downloadUrl) {}
+    private record ApiReadmeResponse(
+            String content,
+            String encoding,
+            @JsonProperty("download_url") String downloadUrl
+    ) {}
 
     @JsonIgnoreProperties(ignoreUnknown = true)
-    private record ApiSearchResponse(@JsonProperty("total_count") int totalCount,
-                                     List<ApiSearchItem> items) {}
+    private record ApiSearchResponse(
+            @JsonProperty("total_count") int totalCount,
+            List<ApiSearchItem> items
+    ) {}
 
     @JsonIgnoreProperties(ignoreUnknown = true)
-    private record ApiSearchItem(Long id, String name,
-                                 @JsonProperty("full_name") String fullName,
-                                 Owner owner, String description, String language,
-                                 @JsonProperty("stargazers_count") int stars,
-                                 @JsonProperty("html_url") String htmlUrl) {}
+    private record ApiSearchItem(
+            Long id,
+            String name,
+            @JsonProperty("full_name") String fullName,
+            Owner owner,
+            String description,
+            String language,
+            @JsonProperty("stargazers_count") int stars,
+            @JsonProperty("html_url") String htmlUrl
+    ) {}
 
     @JsonIgnoreProperties(ignoreUnknown = true)
-    private record ApiErrorResponse(String message,
-                                    @JsonProperty("documentation_url") String documentationUrl) {}
-
-    // --- github-trending-api response DTO ---
+    private record ApiErrorResponse(
+            String message,
+            @JsonProperty("documentation_url") String documentationUrl
+    ) {}
 
     @JsonIgnoreProperties(ignoreUnknown = true)
     private record ApiTrendingItem(
+            String author,
             String name,
             String url,
             String description,
             String language,
-            @JsonProperty("stars") int stars,
-            @JsonProperty("forks") int forks,
-            @JsonProperty("currentPeriodStars") int starsToday,
-            @JsonProperty("builtBy") List<ApiTrendingContributor> builtBy) {}
-
-    @JsonIgnoreProperties(ignoreUnknown = true)
-    private record ApiTrendingContributor(
-            String username, String href, String avatar) {}
+            @JsonProperty("currentPeriodStars") int starsToday
+    ) {}
 }

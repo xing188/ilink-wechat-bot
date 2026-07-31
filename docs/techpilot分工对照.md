@@ -110,12 +110,12 @@
 
 每个功能以 `@Component implements Skill` 实现，由 `SkillManager` 自动注册，零硬编码。
 
-| Skill | id | 执行人 | 底层依赖 |
-|---|---|---|---|
-| `GithubRepoDigestSkill` | `github-repo-digest` | 人3 | 人1的 `GitHubRepoProvider` |
-| `TechRoadmapSkill` | `tech-roadmap` | 人4 | 人2的 `DevToArticleProvider` + `WebSearchProvider` |
-| `DocReviewSkill` | `doc-review` | 人5 | 自己的 `StyleGuideRetriever` + RAG |
-| `DailyDigestSkill` | `daily-digest` | 人6 | 人1的 `GitHubRepoProvider` + 人2的 `DevToArticleProvider` |
+| Skill                   | id                   | 执行人 | 底层依赖                                                  |
+|-------------------------|----------------------|-----|-------------------------------------------------------|
+| `GithubRepoDigestSkill` | `github-repo-digest` | 人3  | 人1的 `GitHubRepoProvider`                              |
+| `TechRoadmapSkill`      | `tech-roadmap`       | 人4  | 人2的 `DevToArticleProvider` + `WebSearchProvider`      |
+| `DocReviewSkill`        | `doc-review`         | 人5  | 自己的 `StyleGuideRetriever` + RAG                       |
+| `DailyDigestSkill`      | `daily-digest`       | 人6  | 人1的 `GitHubRepoProvider` + 人2的 `DevToArticleProvider` |
 
 ### Skill 调用链
 
