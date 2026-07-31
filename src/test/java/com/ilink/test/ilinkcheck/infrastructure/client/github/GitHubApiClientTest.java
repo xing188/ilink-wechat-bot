@@ -22,7 +22,7 @@ class GitHubApiClientTest {
     void shouldDecodeReadmeSummaryWhenBase64ContainsLineBreaks() {
         RestClient.Builder builder = RestClient.builder();
         MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
-        GitHubApiClient client = new GitHubApiClient(builder, "https://api.github.com", "", "");
+        GitHubApiClient client = new GitHubApiClient(builder, "https://api.github.com", "", "", false);
 
         server.expect(requestTo("https://api.github.com/repos/openai/codex"))
                 .andRespond(withSuccess("""
@@ -70,7 +70,8 @@ class GitHubApiClientTest {
                 builder,
                 "https://api.github.com",
                 "",
-                "https://github-trending-api.vercel.app"
+                "https://github-trending-api.vercel.app",
+                false
         );
 
         server.expect(requestTo(startsWith("https://github-trending-api.vercel.app/repositories")))
@@ -101,7 +102,7 @@ class GitHubApiClientTest {
     void shouldFetchTrendingFromOfficialSearchApiWhenCommunitySourceDisabled() {
         RestClient.Builder builder = RestClient.builder();
         MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
-        GitHubApiClient client = new GitHubApiClient(builder, "https://api.github.com", "", "");
+        GitHubApiClient client = new GitHubApiClient(builder, "https://api.github.com", "", "", false);
 
         server.expect(requestTo(startsWith("https://api.github.com/search/repositories")))
                 .andRespond(withSuccess("""

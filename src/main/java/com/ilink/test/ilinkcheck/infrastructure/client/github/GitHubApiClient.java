@@ -9,17 +9,28 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.http.client.ClientHttpRequestFactory;
+import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientResponseException;
 
+import java.net.http.HttpClient;
 import java.nio.charset.StandardCharsets;
+import java.security.GeneralSecurityException;
+import java.security.SecureRandom;
+import java.security.cert.X509Certificate;
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.Base64;
 import java.util.Collections;
 import java.util.List;
+
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.X509TrustManager;
 
 @Component
 @ConditionalOnProperty(prefix = "app.github", name = "enabled", havingValue = "true")
@@ -34,8 +45,15 @@ public class GitHubApiClient implements GitHubRepoProvider {
     public GitHubApiClient(RestClient.Builder restClientBuilder,
                            @Value("${app.github.api-base:https://api.github.com}") String apiBase,
                            @Value("${app.github.token:}") String token,
-                           @Value("${app.github.trending-api-url:}") String trendingApiUrl) {
+                           @Value("${app.github.trending-api-url:}") String trendingApiUrl,
+                           @Value("${app.github.trust-local-ca:false}") boolean trustLocalCa) {
+        // GitHub REST API client
         RestClient.Builder builder = restClientBuilder.baseUrl(trimTrailingSlash(apiBase));
+        if (trustLocalCa) {
+            // Steam++ 等工具会把 GitHub 域名改写成本机代理，Java 默认信任库不认其证书。
+            log.warn("app.github.trust-local-ca=true: GitHub client will trust certificates from local TLS proxies, such as Steam++. Hostname verification stays enabled.");
+            builder = builder.requestFactory(createLenientRequestFactory());
+        }
         if (StringUtils.hasText(token)) {
             builder = builder.defaultHeader("Authorization", "Bearer " + token);
         }
@@ -258,6 +276,42 @@ public class GitHubApiClient implements GitHubRepoProvider {
         }
         return value.endsWith("/") ? value.substring(0, value.length() - 1) : value;
     }
+
+    private ClientHttpRequestFactory createLenientRequestFactory() {
+        HttpClient httpClient = HttpClient.newBuilder()
+                .connectTimeout(Duration.ofSeconds(10))
+                .sslContext(createLenientSslContext())
+                .build();
+        return new JdkClientHttpRequestFactory(httpClient);
+    }
+
+    private SSLContext createLenientSslContext() {
+        try {
+            TrustManager[] trustManagers = new TrustManager[] {
+                    new X509TrustManager() {
+                        @Override
+                        public X509Certificate[] getAcceptedIssuers() {
+                            return new X509Certificate[0];
+                        }
+
+                        @Override
+                        public void checkClientTrusted(X509Certificate[] chain, String authType) {
+                        }
+
+                        @Override
+                        public void checkServerTrusted(X509Certificate[] chain, String authType) {
+                        }
+                    }
+            };
+            SSLContext context = SSLContext.getInstance("TLS");
+            context.init(null, trustManagers, new SecureRandom());
+            return context;
+        } catch (GeneralSecurityException e) {
+            throw new IllegalStateException("Failed to initialize GitHub client SSL context", e);
+        }
+    }
+
+    // --- GitHub REST API response DTOs ---
 
     @JsonIgnoreProperties(ignoreUnknown = true)
     private record ApiRepoResponse(
