@@ -20,9 +20,7 @@ public class IntentRouter {
 
     // Github项目速读触发关键词
     private static final List<String> GITHUB_HINTS = List.of("github", "仓库", "repo", "readme", "开源项目", "速读");
-    // 学习路线任务触发关键词
-    private static final List<String> ROADMAP_HINTS = List.of("学习路线", "路线规划", "我想学", "怎么学", "入门", "roadmap");
-    // 博文审稿触发关键词
+    private static final List<String> ROADMAP_HINTS = List.of("学习路线", "路线规划", "我想学", "怎么学", "学习", "入门", "roadmap");
     private static final List<String> REVIEW_HINTS = List.of("审稿", "审一下", "博客草稿", "文档规范", "排版", "review");
     // 技术晨报订阅关键词
     private static final List<String> DIGEST_HINTS = List.of("晨报", "日报", "订阅", "推送", "每天", "digest");

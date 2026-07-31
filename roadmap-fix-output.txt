@@ -1,0 +1,196 @@
+[INFO] Scanning for projects...
+[INFO] 
+[INFO] ---------------------< com.ilink.test:ilink-check >---------------------
+[INFO] Building ilink-check 0.0.1-SNAPSHOT
+[INFO]   from pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- resources:3.3.1:resources (default-resources) @ ilink-check ---
+[INFO] Copying 4 resources from src\main\resources to target\classes
+[INFO] Copying 6 resources from src\main\resources to target\classes
+[INFO] 
+[INFO] --- compiler:3.14.1:compile (default-compile) @ ilink-check ---
+[INFO] Recompiling the module because of changed source code.
+[INFO] Compiling 150 source files with javac [debug parameters release 21] to target\classes
+[INFO] /D:/Java project/ilink-wechat-bot/src/main/java/com/ilink/test/ilinkcheck/application/image/ImageGenerationTaskService.java: D:\Java project\ilink-wechat-bot\src\main\java\com\ilink\test\ilinkcheck\application\image\ImageGenerationTaskService.java使用了未经检查或不安全的操作。
+[INFO] /D:/Java project/ilink-wechat-bot/src/main/java/com/ilink/test/ilinkcheck/application/image/ImageGenerationTaskService.java: 有关详细信息, 请使用 -Xlint:unchecked 重新编译。
+[INFO] 
+[INFO] --- resources:3.3.1:testResources (default-testResources) @ ilink-check ---
+[INFO] Copying 1 resource from src\test\resources to target\test-classes
+[INFO] 
+[INFO] --- compiler:3.14.1:testCompile (default-testCompile) @ ilink-check ---
+[INFO] Recompiling the module because of changed dependency.
+[INFO] Compiling 20 source files with javac [debug parameters release 21] to target\test-classes
+[INFO] 
+[INFO] --- surefire:3.5.5:test (default-test) @ ilink-check ---
+[INFO] Using auto detected provider org.apache.maven.surefire.junitplatform.JUnitPlatformProvider
+[INFO] 
+[INFO] -------------------------------------------------------
+[INFO]  T E S T S
+[INFO] -------------------------------------------------------
+[INFO] Running com.ilink.test.ilinkcheck.application.agent.orchestrator.RoadmapChainDebugTest
+11:46:20.303 [main] INFO com.ilink.test.ilinkcheck.application.agent.orchestrator.AgentLoopService -- conversationId=debug--81753716, agentTaskType=TECH_ROADMAP, workflowEvent=start
+11:46:20.321 [main] INFO com.ilink.test.ilinkcheck.application.agent.orchestrator.AgentLoopService -- conversationId=debug--81753716, agentTaskType=TECH_ROADMAP, workflowEvent=finish, rounds=2
+==================================================
+>>> CASE-1 我想学 eBPF，帮我规划学习路线
+>>> input            = 我想学 eBPF，帮我规划学习路线
+>>> IntentRouter     = TECH_ROADMAP
+>>> extractTopic      = [eBPF]
+<<< [链路命中] 输出如下：
+eBPF 学习路线
+
+第一阶段：预备知识
+- 基础编程语法
+- 命令行与调试能力
+- 阅读英文文档的基本能力
+
+第二阶段：核心概念
+- eBPF 的核心概念
+- eBPF 的运行机制
+- eBPF 的常见约束
+
+第三阶段：实战建议
+- 做一个最小 demo
+- 完成一个可复现实践
+- 整理一篇学习笔记
+
+推荐资料
+- Getting Started with eBPF：从基础概念、运行机制和第一个 demo 入手的入门文章。（? 320）
+- Practical eBPF Patterns：更偏实战，关注常见模式、调试和落地方式。（? 240）
+- eBPF in Production：讨论线上使用时的观测、约束和风险点。（? 190）
+
+补充参考
+- eBPF tutorial official docs：补充官方文档入口，便于确认核心概念和 API。
+- eBPF tutorial architecture guide：补充一篇架构视角的延伸阅读。
+
+11:46:20.325 [main] INFO com.ilink.test.ilinkcheck.application.agent.orchestrator.AgentLoopService -- conversationId=debug--1129214915, agentTaskType=TECH_ROADMAP, workflowEvent=start
+11:46:20.326 [main] INFO com.ilink.test.ilinkcheck.application.agent.orchestrator.AgentLoopService -- conversationId=debug--1129214915, agentTaskType=TECH_ROADMAP, workflowEvent=finish, rounds=2
+==================================================
+>>> CASE-2 学习 RAG
+>>> input            = 学习 RAG
+>>> IntentRouter     = TECH_ROADMAP
+>>> extractTopic      = [RAG]
+<<< [链路命中] 输出如下：
+RAG 学习路线
+
+第一阶段：预备知识
+- 基础编程语法
+- 命令行与调试能力
+- 阅读英文文档的基本能力
+
+第二阶段：核心概念
+- RAG 的核心概念
+- RAG 的运行机制
+- RAG 的常见约束
+
+第三阶段：实战建议
+- 做一个最小 demo
+- 完成一个可复现实践
+- 整理一篇学习笔记
+
+推荐资料
+- Getting Started with RAG：从基础概念、运行机制和第一个 demo 入手的入门文章。（? 320）
+- Practical RAG Patterns：更偏实战，关注常见模式、调试和落地方式。（? 240）
+- RAG in Production：讨论线上使用时的观测、约束和风险点。（? 190）
+
+补充参考
+- RAG tutorial official docs：补充官方文档入口，便于确认核心概念和 API。
+- RAG tutorial architecture guide：补充一篇架构视角的延伸阅读。
+
+11:46:20.327 [main] INFO com.ilink.test.ilinkcheck.application.agent.orchestrator.AgentLoopService -- conversationId=debug--1047297297, agentTaskType=TECH_ROADMAP, workflowEvent=start
+11:46:20.328 [main] INFO com.ilink.test.ilinkcheck.application.agent.orchestrator.AgentLoopService -- conversationId=debug--1047297297, agentTaskType=TECH_ROADMAP, workflowEvent=finish, rounds=2
+==================================================
+>>> CASE-3 帮我规划一下 Spring AI 的学习路线
+>>> input            = 帮我规划一下 Spring AI 的学习路线
+>>> IntentRouter     = TECH_ROADMAP
+>>> extractTopic      = [Spring AI]
+<<< [链路命中] 输出如下：
+Spring AI 学习路线
+
+第一阶段：预备知识
+- 基础编程语法
+- 命令行与调试能力
+- 阅读英文文档的基本能力
+
+第二阶段：核心概念
+- Spring AI 的核心概念
+- Spring AI 的运行机制
+- Spring AI 的常见约束
+
+第三阶段：实战建议
+- 做一个最小 demo
+- 完成一个可复现实践
+- 整理一篇学习笔记
+
+推荐资料
+- Getting Started with Spring AI：从基础概念、运行机制和第一个 demo 入手的入门文章。（? 320）
+- Practical Spring AI Patterns：更偏实战，关注常见模式、调试和落地方式。（? 240）
+- Spring AI in Production：讨论线上使用时的观测、约束和风险点。（? 190）
+
+补充参考
+- Spring AI tutorial official docs：补充官方文档入口，便于确认核心概念和 API。
+- Spring AI tutorial architecture guide：补充一篇架构视角的延伸阅读。
+
+11:46:20.329 [main] INFO com.ilink.test.ilinkcheck.application.agent.orchestrator.AgentLoopService -- conversationId=debug--1191003507, agentTaskType=TECH_ROADMAP, workflowEvent=start
+11:46:20.329 [main] INFO com.ilink.test.ilinkcheck.application.agent.orchestrator.AgentLoopService -- conversationId=debug--1191003507, agentTaskType=TECH_ROADMAP, currentPhase=ROADMAP_FETCH, workflowEvent=wait-user-input
+==================================================
+>>> CASE-4 只说想学不给主题（应反问问学什么）
+>>> input            = 我想学
+>>> IntentRouter     = TECH_ROADMAP
+>>> extractTopic      = <empty 未提取到>
+<<< [链路命中] 输出如下：
+你想学什么技术？直接回复一个主题，比如 `eBPF`、`RAG` 或 `Spring AI`。
+
+11:46:20.329 [main] INFO com.ilink.test.ilinkcheck.application.agent.orchestrator.AgentLoopService -- conversationId=debug-2134763844, agentTaskType=TECH_ROADMAP, workflowEvent=start
+11:46:20.330 [main] INFO com.ilink.test.ilinkcheck.application.agent.orchestrator.AgentLoopService -- conversationId=debug-2134763844, agentTaskType=TECH_ROADMAP, workflowEvent=finish, rounds=2
+==================================================
+>>> CASE-5 中文主题：我想学 微服务（无空格）
+>>> input            = 我想学微服务
+>>> IntentRouter     = TECH_ROADMAP
+>>> extractTopic      = [微服务]
+<<< [链路命中] 输出如下：
+微服务 学习路线
+
+第一阶段：预备知识
+- 基础编程语法
+- 命令行与调试能力
+- 阅读英文文档的基本能力
+
+第二阶段：核心概念
+- 微服务 的核心概念
+- 微服务 的运行机制
+- 微服务 的常见约束
+
+第三阶段：实战建议
+- 做一个最小 demo
+- 完成一个可复现实践
+- 整理一篇学习笔记
+
+推荐资料
+- Getting Started with 微服务：从基础概念、运行机制和第一个 demo 入手的入门文章。（? 320）
+- Practical 微服务 Patterns：更偏实战，关注常见模式、调试和落地方式。（? 240）
+- 微服务 in Production：讨论线上使用时的观测、约束和风险点。（? 190）
+
+补充参考
+- 微服务 tutorial official docs：补充官方文档入口，便于确认核心概念和 API。
+- 微服务 tutorial architecture guide：补充一篇架构视角的延伸阅读。
+
+==================================================
+>>> CASE-6 非路线意图（应返回 empty）
+>>> input            = 北京今天天气怎么样
+>>> IntentRouter     = <empty 未命中>
+>>> extractTopic      = <empty 未提取到>
+<<< [链路未命中] AgentLoopService.tryHandle 返回 empty，交由普通对话/工具链路
+
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.182 s -- in com.ilink.test.ilinkcheck.application.agent.orchestrator.RoadmapChainDebugTest
+[INFO] 
+[INFO] Results:
+[INFO] 
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0
+[INFO] 
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD SUCCESS
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  10.229 s
+[INFO] Finished at: 2026-07-30T11:46:20+08:00
+[INFO] ------------------------------------------------------------------------

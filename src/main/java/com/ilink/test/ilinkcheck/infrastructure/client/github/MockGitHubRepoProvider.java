@@ -3,18 +3,18 @@ package com.ilink.test.ilinkcheck.infrastructure.client.github;
 import com.ilink.test.ilinkcheck.application.agent.dto.github.RepoInfo;
 import com.ilink.test.ilinkcheck.application.agent.dto.github.TrendingRepo;
 import com.ilink.test.ilinkcheck.application.agent.spi.mcp.GitHubRepoProvider;
-import org.springframework.context.annotation.Profile;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
 
 /**
  * GitHubRepoProvider Mock 实现。
- * 在人1的正式实现就绪前，返回模拟数据供人3测试。
- * 激活方式：application.yml 中设置 spring.profiles.active=dev 或在启动参数加 --spring.profiles.active=mock
+ * 人1正式实现（GitHubApiClient）就绪后，本 Mock 作为备用/测试数据源。
+ * 激活方式：设置 app.github.enabled=false 时启用（默认 enabled=true 使用真实 client）。
  */
 @Component
-@Profile("mock")
+@ConditionalOnProperty(prefix = "app.github", name = "enabled", havingValue = "false")
 public class MockGitHubRepoProvider implements GitHubRepoProvider {
 
     @Override

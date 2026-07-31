@@ -46,13 +46,19 @@ public class RoadmapFetchPhaseExecutor implements PhaseExecutor {
             );
         }
 
-        List<DevToArticle> articles = devToArticleProvider.fetchByTag(topic.toLowerCase(), 3);
+        // 是否要求把资料翻译成中文（如"我想学 RAG 翻译成中"）
+        boolean translate = AgentTextUtils.wantsChinese(state.getLatestUserMessage())
+                || AgentTextUtils.wantsChinese(state.getOriginalUserMessage());
+
+        // 注意：保留主题原始大小写（如 eBPF），大小写归一化交给 Provider 实现决定（Dev.to 标签本身大小写不敏感）。
+        List<DevToArticle> articles = devToArticleProvider.fetchByTag(topic, 3);
         List<SearchResult> references = webSearchProvider.search(topic + " tutorial", 2);
 
         return PhaseExecutionResult.next(AgentPhase.ROADMAP_COMPOSE, Map.of(
                 AgentArtifacts.REQUEST_TOPIC, topic,
                 AgentArtifacts.ROADMAP_ARTICLES, articles,
-                AgentArtifacts.ROADMAP_REFERENCES, references
+                AgentArtifacts.ROADMAP_REFERENCES, references,
+                AgentArtifacts.ROADMAP_TRANSLATE, translate
         ));
     }
 }
