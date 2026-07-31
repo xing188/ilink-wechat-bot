@@ -23,8 +23,6 @@ public class DashScopeRagConfig {
     @Value("${spring.ai.dashscope.api-key}")
     private String apiKey;
 
-<<<<<<< HEAD
-=======
     @Value("${spring.ai.openai.base-url}")
     private String baseUrl;
 
@@ -32,7 +30,6 @@ public class DashScopeRagConfig {
     private String embeddingModel;
 
     //HTTP通信客户端
->>>>>>> 5166eda2d7c711f4a633add3b01ad13cfd33de16
     @Bean
     public DashScopeApi dashScopeApi() {
         return DashScopeApi.builder()
