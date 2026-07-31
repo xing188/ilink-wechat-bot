@@ -77,4 +77,20 @@ class AgentTextUtilsTest {
         Optional<String> topic = AgentTextUtils.extractTopic("我想学rag版");
         assertThat(topic).contains("RAG");
     }
+
+    @Test
+    void shouldNotLeakXiIntoPureChineseTopic() {
+        // "我想学习微服务" → 正则"我想学"不应匹配（后面紧跟"习"），
+        // 应由"学习"前缀匹配，主题="微服务"，不含多余的"习"
+        Optional<String> topic = AgentTextUtils.extractTopic("我想学习微服务");
+        assertThat(topic).contains("微服务");
+        assertThat(topic.get()).doesNotStartWith("习");
+    }
+
+    @Test
+    void shouldNotLeakXiIntoMixedTopic() {
+        // "我想学习rag" → 同理，"习"不应泄漏进主题
+        Optional<String> topic = AgentTextUtils.extractTopic("我想学习rag");
+        assertThat(topic).contains("RAG");
+    }
 }

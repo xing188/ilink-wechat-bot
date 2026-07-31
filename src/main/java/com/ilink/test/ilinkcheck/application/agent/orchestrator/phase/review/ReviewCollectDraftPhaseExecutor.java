@@ -20,9 +20,13 @@ public class ReviewCollectDraftPhaseExecutor implements PhaseExecutor {
 
     @Override
     public PhaseExecutionResult execute(AgentState state) {
-        String draftText = AgentTextUtils.extractDraftText(state.getLatestUserMessage())
-                .or(() -> AgentTextUtils.extractDraftText(state.getOriginalUserMessage()))
-                .orElse(null);
+        // 优先取确认阶段已保存的草稿
+        String draftText = state.getArtifact(AgentArtifacts.REQUEST_DRAFT, String.class);
+        if (draftText == null) {
+            draftText = AgentTextUtils.extractDraftText(state.getLatestUserMessage())
+                    .or(() -> AgentTextUtils.extractDraftText(state.getOriginalUserMessage()))
+                    .orElse(null);
+        }
 
         if (draftText == null) {
             return PhaseExecutionResult.waitForUser(

@@ -17,11 +17,12 @@ public final class AgentTextUtils {
     private static final Pattern GITHUB_URL = Pattern.compile("https?://github\\.com/([^\\s/]+)/([^\\s?#/]+)", Pattern.CASE_INSENSITIVE);
     private static final Pattern REPOSITORY_NAME = Pattern.compile("\\b([A-Za-z0-9_.-]+)/([A-Za-z0-9_.-]+)\\b");
     private static final Pattern QUOTED_TEXT = Pattern.compile("[“\"']([^”\"']+)[”\"']");
-    // 注意：提示词按“最长优先”排列（学习路线 / 路线规划 放在 学习 前面），
-    // 避免 “学习路线 eBPF” 被误摘成主题 “路线”。
-    // 主题前缀与主题之间用 \\s*（零或多个空白），兼容中文无空格输入如"我想学微服务"。
-    // 主题字符类在 ASCII 基础上额外支持中文（\\u4e00-\\u9fa5），并允许单个空格分隔的多词主题（如 Spring AI）。
-    private static final Pattern LEARN_TOPIC = Pattern.compile("(?:学习路线|路线规划|我想学|学习|入门)\\s*([A-Za-z0-9+#._\\u4e00-\\u9fa5]+(?:\\s[A-Za-z0-9+#._\\u4e00-\\u9fa5]+)*)");
+    // 注意：提示词按"最长优先"排列（学习路线 / 路线规划 放在 学习 前面），
+    // 避免 "学习路线 eBPF" 被误摘成主题 "路线"。
+    // "我想学" 用 (?!习) 负向前瞻防止把 "我想学习 xxx" 的 "习" 吃进主题组
+    // （否则正则先匹配较短的"我想学"，剩余"习xxx"全变成主题）。
+    // 主题字符类在 ASCII 基础上额外支持中文（\u4e00-\u9fa5），并允许单个空格分隔的多词主题（如 Spring AI）。
+    private static final Pattern LEARN_TOPIC = Pattern.compile("(?:学习路线|路线规划|我想学(?!习)|学习|入门)\\s*([A-Za-z0-9+#._\\u4e00-\\u9fa5]+(?:\\s[A-Za-z0-9+#._\\u4e00-\\u9fa5]+)*)");
     private static final Pattern TIME_PATTERN = Pattern.compile("\\b([01]?\\d|2[0-3]):([0-5]\\d)\\b");
 
     // 翻译意图关键词：用户希望把英文资料翻译成中文时使用的表达。
