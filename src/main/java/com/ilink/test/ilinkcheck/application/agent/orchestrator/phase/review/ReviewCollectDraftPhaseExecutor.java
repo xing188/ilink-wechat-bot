@@ -15,7 +15,7 @@ public class ReviewCollectDraftPhaseExecutor implements PhaseExecutor {
 
     @Override
     public boolean supports(AgentTaskType taskType, AgentPhase phase) {
-        return taskType == AgentTaskType.DOC_REVIEW && phase == AgentPhase.REVIEW_COLLECT_DRAFT;
+        return taskType == AgentTaskType.DOC_REVIEW && phase == AgentPhase.REVIEW_RETRIEVE_GUIDE;
     }
 
     @Override
@@ -26,7 +26,7 @@ public class ReviewCollectDraftPhaseExecutor implements PhaseExecutor {
 
         if (draftText == null) {
             return PhaseExecutionResult.waitForUser(
-                    AgentPhase.REVIEW_COLLECT_DRAFT,
+                    AgentPhase.REVIEW_RETRIEVE_GUIDE,
                     "请把要审的技术文档或博客草稿直接贴给我，我会按规范帮你审稿。",
                     Map.of()
             );
