@@ -21,9 +21,10 @@ public class QwenTranslationService implements TranslationService {
 
     public QwenTranslationService(
             @Value("${spring.ai.openai.api-key}") String apiKey,
-            @Value("${spring.ai.openai.chat.model:qwen3.7-plus}") String model) {
+            @Value("${app.agent.fast-model:${spring.ai.openai.chat.model:qwen3.7-plus}}") String model) {
         this.apiKey = apiKey;
-        this.model = model; // 与 application-ai.yml 的 chat.model 保持一致
+        // 翻译属于短、确定性任务，默认走 app.agent.fast-model 快模型；未配置时回落主模型
+        this.model = model;
         this.restTemplate = createRestTemplateWithTimeout();
         // 启动时立即诊断：key 是否为未解析的占位符
         if (apiKey == null || apiKey.isBlank() || apiKey.startsWith("${") && apiKey.endsWith("}")) {
@@ -38,8 +39,8 @@ public class QwenTranslationService implements TranslationService {
 
     private static RestTemplate createRestTemplateWithTimeout() {
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
-        factory.setConnectTimeout(5000);   // 连接超时 5 秒
-        factory.setReadTimeout(30000);     // 读取超时 30 秒
+        factory.setConnectTimeout(3000);   // 连接超时 3 秒：连不上就快速失败，别拖演示
+        factory.setReadTimeout(20000);     // 读取超时 20 秒：快模型正常 3~5 秒返回
         return new RestTemplate(factory);
     }
 
@@ -69,22 +70,22 @@ public class QwenTranslationService implements TranslationService {
             }
 
             String prompt = String.format(
-                    "Translate the following %d texts from %s to %s. " +
-                    "Return ONLY the translations, one per line, in the same order, " +
-                    "prefixed with the same number in brackets [N]. " +
-                    "No explanations, no extra text.\n\n%s",
-                    texts.size(), sourceLang, targetLang, numberedText
+                    "%s→%s，逐行翻译，保持 [N] 编号与顺序，只输出译文：\n\n%s",
+                    sourceLang, targetLang, numberedText
             );
+
+            // 输出上限按输入长度动态估算：中文译文一般不超过原文字符数的 1.5 倍，
+            // 给足余量的同时避免模型无谓地生成长尾内容拖慢响应。
+            int maxTokens = Math.min(2048, Math.max(256, numberedText.length()));
 
             Map<String, Object> body = Map.of(
                     "model", model,
                     "messages", List.of(
-                            Map.of("role", "system", "content",
-                                    "You are a professional translator. Translate accurately and concisely."),
+                            Map.of("role", "system", "content", "你是专业翻译，只输出译文，不解释。"),
                             Map.of("role", "user", "content", prompt)
                     ),
-                    "max_tokens", 4096,
-                    "temperature", 0.3
+                    "max_tokens", maxTokens,
+                    "temperature", 0
             );
 
             HttpHeaders headers = new HttpHeaders();

@@ -35,8 +35,10 @@ public class RoadmapComposePhaseExecutor implements PhaseExecutor {
         List<SearchResult> references = state.getArtifact(AgentArtifacts.ROADMAP_REFERENCES);
         boolean translate = Boolean.TRUE.equals(state.getArtifact(AgentArtifacts.ROADMAP_TRANSLATE, Boolean.class));
 
-        RoadmapPlan plan = composeService.compose(topic, articles, references);
-        String reply = composeService.render(plan, references, translate);
+        // 翻译与 LLM 编排并发执行（详见 RoadmapComposeService#composeAndRender），
+        // 编排结果按主题缓存，后续「翻译成中文」不会重复调用 LLM。
+        String reply = composeService.composeAndRender(topic, articles, references, translate);
+        RoadmapPlan plan = composeService.compose(topic, articles, references); // 走缓存，无额外开销
 
         return PhaseExecutionResult.finish(reply, Map.of(
                 AgentArtifacts.ROADMAP_PLAN, plan
