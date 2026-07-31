@@ -135,6 +135,9 @@ public class AgentLoopService {
 
         state.updateLatestUserMessage(userMessage);
         state.clearWaitingUserInput();
+        if (state.getCurrentPhase() == com.ilink.test.ilinkcheck.application.agent.orchestrator.model.AgentPhase.WAIT_USER_INPUT) {
+            state.resumeFromWaitingUserInput();
+        }
         log.info("conversationId={}, agentTaskType={}, currentPhase={}, workflowEvent=resume",
                 state.getConversationId(), state.getTaskType(), state.getCurrentPhase());
         return runWorkflow(state);
@@ -165,13 +168,12 @@ public class AgentLoopService {
             }
 
             if (result.needUserInput()) {
-                if (result.nextPhase() != null) {
-                    state.moveToPhase(result.nextPhase());
-                }
-                state.waitForUserInput();
+                com.ilink.test.ilinkcheck.application.agent.orchestrator.model.AgentPhase resumePhase =
+                        result.nextPhase() != null ? result.nextPhase() : state.getCurrentPhase();
+                state.waitForUserInput(resumePhase);
                 agentStateStore.save(state);
-                log.info("conversationId={}, agentTaskType={}, currentPhase={}, workflowEvent=wait-user-input",
-                        state.getConversationId(), state.getTaskType(), state.getCurrentPhase());
+                log.info("conversationId={}, agentTaskType={}, currentPhase={}, resumePhase={}, workflowEvent=wait-user-input",
+                        state.getConversationId(), state.getTaskType(), state.getCurrentPhase(), resumePhase);
                 return StringUtils.hasText(result.replyToUser())
                         ? result.replyToUser()
                         : "请继续提供下一步信息。";

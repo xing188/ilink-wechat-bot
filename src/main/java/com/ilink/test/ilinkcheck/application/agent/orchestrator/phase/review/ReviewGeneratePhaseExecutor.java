@@ -14,7 +14,7 @@ import java.util.stream.Collectors;
 
 /**
  * 文档审稿任务：第二阶段【生成审稿报告阶段】
- * 前置阶段：REVIEW_COLLECT_DRAFT
+ * 前置阶段：REVIEW_RETRIEVE_GUIDE
  * 职责：
  * 1. 从会话工件读取用户提交的文档草稿
  * 2. 调用RAG风格规范检索器，依据规范检测文本问题

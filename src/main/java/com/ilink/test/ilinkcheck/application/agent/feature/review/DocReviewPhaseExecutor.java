@@ -17,7 +17,7 @@ import java.util.Map;
  * </p>
  *
  * <p>该执行器是审稿主流程的核心阶段，前置阶段
- * {@link AgentPhase#REVIEW_COLLECT_DRAFT} 负责收集用户输入的草稿文本。</p>
+ * {@link AgentPhase#REVIEW_RETRIEVE_GUIDE} 负责收集用户输入的草稿文本。</p>
  *
  * <p>边界：审稿逻辑在 feature.review，向量检索在 infrastructure.rag。
  * 不直接写 HTTP 请求，不改公共入口。</p>

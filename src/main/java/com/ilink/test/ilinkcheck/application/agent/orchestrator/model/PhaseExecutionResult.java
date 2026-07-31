@@ -25,10 +25,10 @@ public record PhaseExecutionResult(
         return new PhaseExecutionResult(nextPhase, artifactsDelta, null, false, false);
     }
 
-    public static PhaseExecutionResult waitForUser(AgentPhase nextPhase,
+    public static PhaseExecutionResult waitForUser(AgentPhase resumePhase,
                                                    String replyToUser,
                                                    Map<String, Object> artifactsDelta) {
-        return new PhaseExecutionResult(nextPhase, artifactsDelta, replyToUser, true, false);
+        return new PhaseExecutionResult(resumePhase, artifactsDelta, replyToUser, true, false);
     }
 
     public static PhaseExecutionResult finish(String replyToUser, Map<String, Object> artifactsDelta) {

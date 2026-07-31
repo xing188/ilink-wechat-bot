@@ -16,17 +16,27 @@ import java.util.List;
 @Service
 public class StyleGuideRagRetriever implements RagRetriever {
 
+    // 底层向量门面，和你之前整套向量存储能力打通
     private final VectorStoreService vectorStoreService;
 
     public StyleGuideRagRetriever(VectorStoreService vectorStoreService) {
         this.vectorStoreService = vectorStoreService;
     }
 
+    /**
+     * 绑定当前检索器归属的知识库ID
+     * RagService启动时依靠这个ID建立路由映射
+     */
     @Override
     public String knowledgeBaseId() {
         return RagKnowledgeBase.STYLE_GUIDE.id();
     }
 
+    /**
+     * 通用检索标准方法，框架统一调用入口
+     * @param query 通用检索请求：查询文本、topK、扩展参数
+     * @return 统一分片模型 List<RagChunk>
+     */
     @Override
     public List<RagChunk> retrieve(RagQuery query) {
         List<Document> relevantDocs = vectorStoreService.search(query.queryText(), query.topK());
