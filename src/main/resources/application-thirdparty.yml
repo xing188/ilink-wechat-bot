@@ -9,6 +9,7 @@ app:
     enabled: true
     api-base: "https://api.github.com"
     token: ${GITHUB_TOKEN:}
-    trending-api-url: "https://github-trending-api.vercel.app"
+    trending-api-url: "https://cloudflare-mcp1.zx1993.top/api"
+    trending-path: "/trending"
     # 兼容 Steam++ 等本地 TLS 代理签发的证书，否则 Java 会拒绝访问被 hosts 劫持的 GitHub 域名。
     trust-local-ca: true

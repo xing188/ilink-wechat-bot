@@ -2,6 +2,7 @@ package com.ilink.test.ilinkcheck.infrastructure.client.github;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.ilink.test.ilinkcheck.application.agent.dto.github.RepoInfo;
 import com.ilink.test.ilinkcheck.application.agent.dto.github.TrendingRepo;
 import com.ilink.test.ilinkcheck.application.agent.spi.mcp.GitHubRepoProvider;
@@ -24,6 +25,7 @@ import java.security.cert.X509Certificate;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Collections;
 import java.util.List;
@@ -41,6 +43,9 @@ public class GitHubApiClient implements GitHubRepoProvider {
 
     private final RestClient restClient;
     private final RestClient trendingClient;
+
+    @Value("${app.github.trending-path:/repositories}")
+    private String trendingPath = "/repositories";
 
     public GitHubApiClient(RestClient.Builder restClientBuilder,
                            @Value("${app.github.api-base:https://api.github.com}") String apiBase,
@@ -114,10 +119,10 @@ public class GitHubApiClient implements GitHubRepoProvider {
     }
 
     private List<TrendingRepo> fetchTrendingFromCommunityApi(String language, String since) {
-        ApiTrendingItem[] items = trendingClient.get()
+        JsonNode response = trendingClient.get()
                 .uri(uriBuilder -> {
-                    var builder = uriBuilder.path("/repositories");
-                    if (StringUtils.hasText(since) && !"daily".equalsIgnoreCase(since)) {
+                    var builder = uriBuilder.path(trendingPath);
+                    if (StringUtils.hasText(since)) {
                         builder = builder.queryParam("since", since);
                     }
                     if (StringUtils.hasText(language) && !"all".equalsIgnoreCase(language)) {
@@ -126,24 +131,43 @@ public class GitHubApiClient implements GitHubRepoProvider {
                     return builder.build();
                 })
                 .retrieve()
-                .body(ApiTrendingItem[].class);
+                .body(JsonNode.class);
 
-        if (items == null) {
+        JsonNode items = response != null && response.isArray() ? response : response != null ? response.path("data") : null;
+        if (items == null || !items.isArray() || items.size() == 0) {
             return Collections.emptyList();
         }
 
-        return List.of(items).stream()
-                .map(item -> new TrendingRepo(
-                        StringUtils.hasText(item.author()) ? item.author() : parseOwner(item.url()),
-                        item.name(),
-                        item.description(),
-                        item.language(),
-                        item.starsToday(),
-                        item.url(),
-                        TrendingRepo.MetricType.DAILY_STARS,
-                        TrendingRepo.Source.COMMUNITY_TRENDING_API
-                ))
-                .toList();
+        List<TrendingRepo> repos = new ArrayList<>();
+        for (JsonNode item : items) {
+            String url = item.path("url").asText("");
+            String owner = firstText(item, "author", "username");
+            String name = firstText(item, "name", "reponame");
+            int stars = item.hasNonNull("currentPeriodStars")
+                    ? item.path("currentPeriodStars").asInt(0)
+                    : item.path("starsToday").asInt(0);
+            repos.add(new TrendingRepo(
+                    StringUtils.hasText(owner) ? owner : parseOwner(url),
+                    StringUtils.hasText(name) ? name : "unknown",
+                    item.path("description").asText(null),
+                    item.path("language").asText(null),
+                    stars,
+                    url,
+                    TrendingRepo.MetricType.DAILY_STARS,
+                    TrendingRepo.Source.COMMUNITY_TRENDING_API
+            ));
+        }
+        return repos;
+    }
+
+    private String firstText(JsonNode node, String... fieldNames) {
+        for (String fieldName : fieldNames) {
+            JsonNode value = node.get(fieldName);
+            if (value != null && value.isTextual() && StringUtils.hasText(value.asText())) {
+                return value.asText();
+            }
+        }
+        return "";
     }
 
     private List<TrendingRepo> fetchTrendingFromSearch(String language, String since) {
