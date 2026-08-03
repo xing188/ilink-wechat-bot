@@ -2,6 +2,7 @@ package com.ilink.test.ilinkcheck.adapter.inbound.wechat;
 
 import com.github.wechat.ilink.sdk.ILinkClient;
 import com.ilink.test.ilinkcheck.adapter.outbound.wechat.WechatMessageGateway;
+import com.ilink.test.ilinkcheck.application.agent.feature.roadmap.MindmapImageCache;
 import com.ilink.test.ilinkcheck.application.conversation.ConversationService;
 import com.ilink.test.ilinkcheck.application.image.ImageGenerationTaskService;
 import com.ilink.test.ilinkcheck.application.reminder.context.ReminderRequestContext;
@@ -25,17 +26,20 @@ public class TextMessageProcessor {
     private final WechatMessageGateway wechatMessageGateway;
     private final ImageGenerationTaskService imageGenerationTaskService;
     private final VoiceSelectionService voiceSelectionService;
+    private final MindmapImageCache mindmapImageCache;
 
     public TextMessageProcessor(ConversationService conversationService,
                                 ReplyStrategyService replyStrategyService,
                                 WechatMessageGateway wechatMessageGateway,
                                 ImageGenerationTaskService imageGenerationTaskService,
-                                VoiceSelectionService voiceSelectionService) {
+                                VoiceSelectionService voiceSelectionService,
+                                MindmapImageCache mindmapImageCache) {
         this.conversationService = conversationService;
         this.replyStrategyService = replyStrategyService;
         this.wechatMessageGateway = wechatMessageGateway;
         this.imageGenerationTaskService = imageGenerationTaskService;
         this.voiceSelectionService = voiceSelectionService;
+        this.mindmapImageCache = mindmapImageCache;
     }
 
     public void process(ILinkClient iLinkClient, String fromUserId, String text) {
@@ -88,6 +92,30 @@ public class TextMessageProcessor {
         if (result.type() == ConversationResult.Type.DRAW_IMAGE) {
             byte[] imageBytes = imageGenerationTaskService.generate(result.content());
             wechatMessageGateway.sendImage(client, fromUserId, imageBytes, "wanx.jpg", "图片生成成功。");
+            return;
+        }
+
+        if (result.type() == ConversationResult.Type.IMAGE) {
+            byte[] imageBytes = mindmapImageCache.get(result.content());
+            if (imageBytes == null || imageBytes.length == 0) {
+                log.warn("Mindmap image not found or expired. conversationId={}, cacheKey={}", fromUserId, result.content());
+                wechatMessageGateway.sendText(client, fromUserId, "思维导图图片已过期，请重新生成。");
+                return;
+            }
+            wechatMessageGateway.sendImage(client, fromUserId, imageBytes, "mindmap.png", "知识点思维导图");
+
+            // 双输出：若工作流还附带了可编辑的 .xmind 文件，则一并发送
+            if (result.fileCacheKey() != null) {
+                byte[] fileBytes = mindmapImageCache.get(result.fileCacheKey());
+                if (fileBytes != null && fileBytes.length > 0) {
+                    String fileName = (result.fileName() != null) ? result.fileName() : "知识点思维导图.xmind";
+                    wechatMessageGateway.sendFile(client, fromUserId, fileBytes, fileName,
+                            "可编辑版思维导图（用 Xmind / 百度脑图打开）");
+                } else {
+                    log.warn("Mindmap xmind file not found or expired. conversationId={}, cacheKey={}",
+                            fromUserId, result.fileCacheKey());
+                }
+            }
             return;
         }
 

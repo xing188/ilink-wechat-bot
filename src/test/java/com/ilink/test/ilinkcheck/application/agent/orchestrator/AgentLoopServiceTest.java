@@ -23,8 +23,13 @@ import com.ilink.test.ilinkcheck.application.agent.orchestrator.phase.review.Rev
 import com.ilink.test.ilinkcheck.application.agent.feature.digest.DailyDigestComposeService;
 import com.ilink.test.ilinkcheck.application.agent.feature.digest.DailyDigestSubscriptionService;
 import com.ilink.test.ilinkcheck.application.agent.feature.digest.DigestSubscriptionRepository;
+import com.ilink.test.ilinkcheck.application.agent.feature.roadmap.MindmapGenerationService;
+import com.ilink.test.ilinkcheck.application.agent.feature.roadmap.MindmapImageCache;
 import com.ilink.test.ilinkcheck.application.agent.feature.roadmap.RoadmapComposeService;
 import com.ilink.test.ilinkcheck.application.agent.orchestrator.phase.roadmap.RoadmapComposePhaseExecutor;
+import com.ilink.test.ilinkcheck.application.agent.orchestrator.phase.roadmap.RoadmapConfirmDetailPhaseExecutor;
+import com.ilink.test.ilinkcheck.application.agent.orchestrator.phase.roadmap.RoadmapConfirmMindmapPhaseExecutor;
+import com.ilink.test.ilinkcheck.application.agent.orchestrator.phase.roadmap.RoadmapConfirmVideoPhaseExecutor;
 import com.ilink.test.ilinkcheck.application.agent.orchestrator.phase.roadmap.RoadmapFetchPhaseExecutor;
 import com.ilink.test.ilinkcheck.application.agent.orchestrator.routing.IntentRouter;
 import com.ilink.test.ilinkcheck.application.agent.orchestrator.runtime.InMemoryAgentStateStore;
@@ -137,14 +142,114 @@ class AgentLoopServiceTest {
 
     @Test
     void shouldGenerateTechRoadmap() {
+        // 渐进式交互：首条回复是精简版并引导「详细」，第二条才产出完整版
         AgentLoopService agentLoopService = createAgentLoopService();
 
-        Optional<String> reply = agentLoopService.tryHandle("conv-2", "我想学 eBPF，帮我规划学习路线");
+        Optional<String> firstReply = agentLoopService.tryHandle("conv-2", "我想学 eBPF，帮我规划学习路线");
+
+        assertThat(firstReply).isPresent();
+        assertThat(firstReply.get()).contains("eBPF 学习路线");
+        assertThat(firstReply.get()).contains("详细");
+        assertThat(firstReply.get()).doesNotContain("第一阶段：预备知识");
+
+        Optional<String> secondReply = agentLoopService.tryHandle("conv-2", "详细");
+
+        assertThat(secondReply).isPresent();
+        assertThat(secondReply.get()).contains("eBPF 学习路线");
+        assertThat(secondReply.get()).contains("第一阶段：预备知识");
+        assertThat(secondReply.get()).contains("推荐资料");
+    }
+
+    @Test
+    void shouldEndRoadmapGracefullyWhenUserDeclinesDetailed() {
+        // 用户在精简版后回复「不用了」，应礼貌结束而不强制推送完整版
+        AgentLoopService agentLoopService = createAgentLoopService();
+
+        agentLoopService.tryHandle("conv-12", "我想学 eBPF，帮我规划学习路线");
+        Optional<String> reply = agentLoopService.tryHandle("conv-12", "不用了");
 
         assertThat(reply).isPresent();
-        assertThat(reply.get()).contains("eBPF 学习路线");
-        assertThat(reply.get()).contains("第一阶段：预备知识");
-        assertThat(reply.get()).contains("推荐资料");
+        assertThat(reply.get()).doesNotContain("第一阶段：预备知识");
+        assertThat(reply.get()).contains("完整版路线先不发了");
+    }
+
+    @Test
+    void shouldOfferBilibiliVideoLinksThenAskForMindmap() {
+        // 渐进式交互第三屏：完整版后询问视频，用户确认后发送视频链接并继续询问思维导图
+        AgentLoopService agentLoopService = createAgentLoopService();
+
+        agentLoopService.tryHandle("conv-20", "我想学 eBPF，帮我规划学习路线");
+        Optional<String> detailedReply = agentLoopService.tryHandle("conv-20", "详细");
+
+        assertThat(detailedReply).isPresent();
+        assertThat(detailedReply.get()).contains("B 站网课");
+        assertThat(detailedReply.get()).contains("思维导图");
+
+        Optional<String> videoReply = agentLoopService.tryHandle("conv-20", "视频");
+
+        assertThat(videoReply).isPresent();
+        assertThat(videoReply.get()).contains("配套 B 站网课视频");
+        assertThat(videoReply.get()).contains("bilibili.com");
+        assertThat(videoReply.get()).contains("来源");
+        assertThat(videoReply.get()).contains("思维导图");
+    }
+
+    @Test
+    void shouldSkipBothExtrasGracefully() {
+        // 完整版后用户都不要补充资料，应礼貌结束而不强制推送视频或思维导图
+        AgentLoopService agentLoopService = createAgentLoopService();
+
+        agentLoopService.tryHandle("conv-21", "我想学 eBPF，帮我规划学习路线");
+        agentLoopService.tryHandle("conv-21", "详细");
+        Optional<String> reply = agentLoopService.tryHandle("conv-21", "不用了");
+
+        assertThat(reply).isPresent();
+        assertThat(reply.get()).contains("补充资料先不发了");
+        assertThat(reply.get()).doesNotContain("bilibili.com");
+    }
+
+    @Test
+    void shouldJumpToMindmapWhenUserRequestsItDirectlyAfterDetail() {
+        // 完整版后用户直接回复「思维导图」，不应被网课环节卡住，
+        // 应直接推进到 MINDMAP 阶段并在同一轮请求内返回 [MINDMAP_IMAGE] 标记（不再需要二次输入）。
+        AgentLoopService agentLoopService = createAgentLoopService();
+
+        agentLoopService.tryHandle("conv-21b", "我想学 eBPF，帮我规划学习路线");
+        agentLoopService.tryHandle("conv-21b", "详细");
+        Optional<String> reply = agentLoopService.tryHandle("conv-21b", "思维导图");
+
+        assertThat(reply).isPresent();
+        // VideoPhaseExecutor 用 next() 直接推进到 MINDMAP 阶段，主循环继续执行 MindmapPhaseExecutor
+        assertThat(reply.get()).startsWith("[MINDMAP_IMAGE]:");
+    }
+
+    @Test
+    void shouldGenerateMindmapImageWhenUserRequestsIt() {
+        // 渐进式交互第四屏：看了视频后用户回复「思维导图」，生成图片版导图并返回 [MINDMAP_IMAGE] 标记
+        AgentLoopService agentLoopService = createAgentLoopService();
+
+        agentLoopService.tryHandle("conv-22", "我想学 eBPF，帮我规划学习路线");
+        agentLoopService.tryHandle("conv-22", "详细");
+        agentLoopService.tryHandle("conv-22", "视频"); // 先看视频
+        Optional<String> reply = agentLoopService.tryHandle("conv-22", "思维导图");
+
+        assertThat(reply).isPresent();
+        assertThat(reply.get()).startsWith("[MINDMAP_IMAGE]:");
+    }
+
+    @Test
+    void shouldSkipMindmapWhenUserDeclines() {
+        // 询问思维导图后用户拒绝，应礼貌结束
+        AgentLoopService agentLoopService = createAgentLoopService();
+
+        agentLoopService.tryHandle("conv-23", "我想学 eBPF，帮我规划学习路线");
+        agentLoopService.tryHandle("conv-23", "详细");
+        agentLoopService.tryHandle("conv-23", "视频"); // 看了视频
+        Optional<String> reply = agentLoopService.tryHandle("conv-23", "不用");
+
+        assertThat(reply).isPresent();
+        assertThat(reply.get()).contains("思维导图先不发了");
+        assertThat(reply.get()).doesNotContain("知识点思维导图");
     }
 
     @Test
@@ -433,10 +538,20 @@ class AgentLoopServiceTest {
                 new DevToArticle("Practical " + tag, "https://dev.to/example/2", tag + ",practice", 240, "一篇实战文章。")
         ).stream().limit(limit).toList();
 
-        WebSearchProvider webSearchProvider = (query, limit) -> List.of(
-                new SearchResult(query + " official docs", "https://example.com/docs", "官方文档入口。"),
-                new SearchResult(query + " guide", "https://example.com/guide", "补充阅读。")
-        ).stream().limit(limit).toList();
+        WebSearchProvider webSearchProvider = (query, limit) -> {
+            // 视频检索：查询含 bilibili / B站 时返回 B 站网课链接，用于验证「网课视频」分支
+            if (query.contains("bilibili") || query.contains("B站")) {
+                return List.of(
+                        new SearchResult(query + " 入门到实战", "https://www.bilibili.com/video/BV1abc", "UP 主系统讲解，从环境搭建到项目实战。"),
+                        new SearchResult(query + " 核心原理", "https://www.bilibili.com/video/BV2def", "图解核心原理与设计思想。"),
+                        new SearchResult(query + " 项目实战", "https://www.bilibili.com/video/BV3ghi", "手把手带你做一个最小可运行项目。")
+                ).stream().limit(limit).toList();
+            }
+            return List.of(
+                    new SearchResult(query + " official docs", "https://example.com/docs", "官方文档入口。"),
+                    new SearchResult(query + " guide", "https://example.com/guide", "补充阅读。")
+            ).stream().limit(limit).toList();
+        };
 
         StyleGuideRetriever styleGuideRetriever = draftText -> List.of(
                 new ReviewSuggestion("排版", "正文前半段", "检测到中英文直接贴合的写法。", "建议改成 `Redis 延迟`。"),
@@ -479,6 +594,9 @@ class AgentLoopServiceTest {
                 new GitHubCodeExplainPhaseExecutor(gitHubRepoDigestService),
                 new RoadmapFetchPhaseExecutor(devToArticleProvider, webSearchProvider),
                 new RoadmapComposePhaseExecutor(composeService),
+                new RoadmapConfirmDetailPhaseExecutor(composeService),
+                new RoadmapConfirmVideoPhaseExecutor(webSearchProvider, composeService),
+                new RoadmapConfirmMindmapPhaseExecutor(new MindmapGenerationService(), new MindmapImageCache()),
                 new ReviewConfirmPhaseExecutor(),
                 new ReviewCollectDraftPhaseExecutor(),
                 new DocReviewPhaseExecutor(draftReviewService),

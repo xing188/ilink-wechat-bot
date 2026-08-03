@@ -36,6 +36,29 @@ public final class AgentTextUtils {
     // 用正则整体匹配，避免"中文"这类子串在其它语境下误触发（如"中文文档"属正常主题）。
     private static final Pattern TRANSLATE_HINTS = Pattern.compile("翻译成中文|译成中文|中文版|翻译|中文|汉化");
 
+    // 完整版意图关键词：用户在精简版路线后回复"详细/完整/要"等表达，表示想要完整版。
+    // 用英文关键词兜底（full/detail），覆盖混合输入；否定词优先级更高（见 DETAIL_NEGATION）。
+    private static final Pattern DETAIL_HINTS = Pattern.compile(
+            "详细|完整|深入|展开|更多|继续|可以|好的|好啊|没问题|是的|对|想看|看看|ok|yes|detail|full",
+            Pattern.CASE_INSENSITIVE);
+    // 否定/拒绝关键词：明确不要完整版时（"不用了/不要/算了"），即使命中上面的词也不算想要。
+    private static final Pattern DETAIL_NEGATION = Pattern.compile(
+            "不(要|用|需要|想|看)|不用了|算了|暂时不|先不|还没|别|不需要");
+
+    // 网课视频意图关键词：用户在完整版路线后回复"视频/网课/B站/bilibili/课程/教程"等，
+    // 表示想要配套的视频资料链接。英文关键词兜底（video/course），覆盖混合输入；
+    // 否定词优先级更高（复用 DETAIL_NEGATION）。
+    private static final Pattern VIDEO_HINTS = Pattern.compile(
+            "视频|网课|bilibili|哔哩|\\bB站\\b|课程|教程|上课|video|course",
+            Pattern.CASE_INSENSITIVE);
+
+    // 思维导图意图关键词：用户在完整版/视频后回复"思维导图/脑图/导图/大纲"等，
+    // 表示想要一份独立生成的知识点思维导图。英文关键词兜底（mindmap/mind map）。
+    // 否定词优先级更高（复用 DETAIL_NEGATION）。
+    private static final Pattern MINDMAP_HINTS = Pattern.compile(
+            "思维导图|思维图|脑图|知识图谱|知识图|大纲|导图|mindmap|mind\\s*map",
+            Pattern.CASE_INSENSITIVE);
+
     // 专业术语规范表：用户输入的小写 / 大小写混写（如 rag / ebpf）统一规范为专业写法（RAG / eBPF）。
     // key 统一小写，便于大小写不敏感匹配；value 是展示用的规范形式。
     // 不在表中的主题（如中文"微服务"）保持原样，原样输出即为规范写法。
@@ -145,6 +168,52 @@ public final class AgentTextUtils {
             return false;
         }
         return TRANSLATE_HINTS.matcher(text).find();
+    }
+
+    /**
+     * 判断用户是否在精简版路线后表示想要完整版（带说明 + 资料链接）。
+     * 优先排除明确的拒绝表达（"不用了/不要/算了"），再匹配正向关键词。
+     */
+    public static boolean wantsDetailed(String text) {
+        if (!StringUtils.hasText(text)) {
+            return false;
+        }
+        // 否定优先：包含"不用了/不要/不需要"等明确拒绝词时不算想要
+        if (DETAIL_NEGATION.matcher(text).find()) {
+            return false;
+        }
+        return DETAIL_HINTS.matcher(text).find();
+    }
+
+    /**
+     * 判断用户是否在完整版路线后表示想要配套的网课视频链接（B 站）。
+     * 优先排除明确的拒绝表达（"不用了/不要/算了"），再匹配视频类关键词，
+     * 或复用完整版的肯定词（"好的/可以/继续"等）作为笼统的"要"信号。
+     */
+    public static boolean wantsVideo(String text) {
+        if (!StringUtils.hasText(text)) {
+            return false;
+        }
+        // 否定优先：包含"不用了/不要/不需要"等明确拒绝词时也不算想要视频
+        if (DETAIL_NEGATION.matcher(text).find()) {
+            return false;
+        }
+        return VIDEO_HINTS.matcher(text).find() || DETAIL_HINTS.matcher(text).find();
+    }
+
+    /**
+     * 判断用户是否在完整版/视频后表示想要一份知识点思维导图。
+     * 优先排除明确的拒绝表达（"不用了/不要/算了"），再匹配思维导图类关键词。
+     */
+    public static boolean wantsMindmap(String text) {
+        if (!StringUtils.hasText(text)) {
+            return false;
+        }
+        // 否定优先：包含"不用了/不要/不需要"等明确拒绝词时不算想要
+        if (DETAIL_NEGATION.matcher(text).find()) {
+            return false;
+        }
+        return MINDMAP_HINTS.matcher(text).find();
     }
 
     /**

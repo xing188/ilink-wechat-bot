@@ -172,7 +172,8 @@ public class AgentLoopService {
             state.putArtifact(AgentArtifacts.ROADMAP_TRANSLATE, true);
             state.updateLatestUserMessage(userMessage);
             state.clearWaitingUserInput();
-            state.moveToPhase(AgentPhase.ROADMAP_COMPOSE);
+            // 进入确认阶段由其渲染完整版（带翻译），避免在精简版后再次只回精简版
+            state.moveToPhase(AgentPhase.ROADMAP_CONFIRM_DETAIL);
             log.info("conversationId={}, agentTaskType={}, workflowEvent=translate",
                     state.getConversationId(), state.getTaskType());
             publishEvent(state, "translate", "将学习路线翻译成中文");
