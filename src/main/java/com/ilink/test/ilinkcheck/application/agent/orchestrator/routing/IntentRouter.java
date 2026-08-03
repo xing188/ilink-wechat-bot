@@ -83,7 +83,14 @@ public class IntentRouter {
             return Optional.of(AgentTaskType.GITHUB_REPO_DIGEST);
         }
 
-        // 优先级2：LLM 语义路由
+        // 优先级2：长文本粘贴 —— 高置信信号（含换行/代码块或足够长），
+        // 直接进入审稿确认流程，不受 LLM 判定 NONE 的短路影响。
+        if (AgentTextUtils.extractDraftText(text).isPresent()) {
+            log.info("IntentRouter route result, message=<draft>, matchTask=DOC_REVIEW, strategy=long-text");
+            return Optional.of(AgentTaskType.DOC_REVIEW);
+        }
+
+        // 优先级3：LLM 语义路由
         if (llmEnabled && routingChatClient != null) {
             LlmVerdict verdict = llmRoute(text);
             if (verdict.decision() == LlmVerdict.LlmDecision.TASK) {
@@ -97,7 +104,7 @@ public class IntentRouter {
             log.info("IntentRouter route result, message={}, llmDegraded=true, strategy=rule-fallback", text);
         }
 
-        // 优先级3：关键词规则兜底（含长文本草稿）
+        // 优先级4：关键词规则兜底
         Optional<AgentTaskType> result = ruleRoute(text);
         log.info("IntentRouter route result, message={}, matchTask={}, strategy={}",
                 text, result.map(AgentTaskType::name).orElse("NONE"),
@@ -198,10 +205,6 @@ public class IntentRouter {
         // 优先级4：晨报订阅
         if (containsAny(text, DIGEST_HINTS)) {
             return Optional.of(AgentTaskType.DAILY_DIGEST_SUBSCRIBE);
-        }
-        // 优先级5：长文本文章兜底 —— 用户直接贴了文章/代码/草稿，先确认是否需要审稿
-        if (AgentTextUtils.extractDraftText(text).isPresent()) {
-            return Optional.of(AgentTaskType.DOC_REVIEW);
         }
         return Optional.empty();
     }
