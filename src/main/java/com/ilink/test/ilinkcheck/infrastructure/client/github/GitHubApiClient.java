@@ -107,6 +107,7 @@ public class GitHubApiClient implements GitHubRepoProvider {
                         "GitHub API returned empty body");
             }
 
+            String readme = fetchReadmeText(owner, repo);
             return new RepoInfo(
                     response.owner() != null ? response.owner().login() : owner,
                     response.name(),
@@ -114,9 +115,9 @@ public class GitHubApiClient implements GitHubRepoProvider {
                     response.language(),
                     response.stars(),
                     response.forks(),
-                    fetchReadmeSummary(owner, repo),
+                    buildReadmeSummary(readme),
                     detectTechStack(response.language(), response.topics()),
-                    fetchReadmeRaw(owner, repo)
+                    buildReadmeRaw(readme)
             );
         } catch (RestClientResponseException e) {
             throw translateException("fetchRepo", e);
@@ -302,7 +303,10 @@ public class GitHubApiClient implements GitHubRepoProvider {
         }
     }
 
-    private String fetchReadmeSummary(String owner, String repo) {
+    /**
+     * 拉取并解码 README 原文（只请求一次 /readme，摘要与原文共享同一份文本）。
+     */
+    private String fetchReadmeText(String owner, String repo) {
         try {
             ApiReadmeResponse readmeResp = restClient.get()
                     .uri("/repos/{owner}/{repo}/readme", owner, repo)
@@ -311,68 +315,67 @@ public class GitHubApiClient implements GitHubRepoProvider {
             if (readmeResp == null || !StringUtils.hasText(readmeResp.content())) {
                 return "";
             }
-
             byte[] decoded = Base64.getMimeDecoder().decode(readmeResp.content());
-            String text = new String(decoded, StandardCharsets.UTF_8);
-            StringBuilder summary = new StringBuilder();
-            boolean collecting = false;
-            for (String line : text.split("\\R")) {
-                String cleaned = cleanReadmeLine(line);
-                if (!StringUtils.hasText(cleaned)) {
-                    if (collecting) {
-                        break;
-                    }
-                    continue;
-                }
-
-                collecting = true;
-                if (summary.length() > 0) {
-                    summary.append(' ');
-                }
-                summary.append(cleaned);
-                if (summary.length() > 300) {
-                    break;
-                }
-            }
-            String result = normalizeWhitespace(summary.toString());
-            return result.length() > 300 ? result.substring(0, 300) + "..." : result;
+            return new String(decoded, StandardCharsets.UTF_8);
         } catch (Exception e) {
-            log.warn("Failed to decode README summary for repo={}/{}", owner, repo, e);
+            log.warn("Failed to fetch README for repo={}/{}", owner, repo, e);
             return "";
         }
     }
 
-    private String fetchReadmeRaw(String owner, String repo) {
-        try {
-            ApiReadmeResponse readmeResp = restClient.get()
-                    .uri("/repos/{owner}/{repo}/readme", owner, repo)
-                    .retrieve()
-                    .body(ApiReadmeResponse.class);
-            if (readmeResp == null || !StringUtils.hasText(readmeResp.content())) {
-                return "";
-            }
-
-            byte[] decoded = Base64.getMimeDecoder().decode(readmeResp.content());
-            String text = new String(decoded, StandardCharsets.UTF_8);
-            StringBuilder result = new StringBuilder();
-            for (String line : text.split("\\R")) {
-                String cleaned = cleanReadmeLine(line);
-                if (!StringUtils.hasText(cleaned)) {
-                    continue;
-                }
-                if (result.length() > 0) {
-                    result.append('\n');
-                }
-                result.append(cleaned);
-                if (result.length() > 2000) {
-                    break;
-                }
-            }
-            return normalizeWhitespace(result.toString());
-        } catch (Exception e) {
-            log.warn("Failed to fetch raw README for repo={}/{}", owner, repo, e);
+    /**
+     * 从 README 文本生成简短摘要（前 300 字符，清理后拼接）。
+     */
+    private String buildReadmeSummary(String text) {
+        if (!StringUtils.hasText(text)) {
             return "";
         }
+        StringBuilder summary = new StringBuilder();
+        boolean collecting = false;
+        for (String line : text.split("\\R")) {
+            String cleaned = cleanReadmeLine(line);
+            if (!StringUtils.hasText(cleaned)) {
+                if (collecting) {
+                    break;
+                }
+                continue;
+            }
+
+            collecting = true;
+            if (summary.length() > 0) {
+                summary.append(' ');
+            }
+            summary.append(cleaned);
+            if (summary.length() > 300) {
+                break;
+            }
+        }
+        String result = normalizeWhitespace(summary.toString());
+        return result.length() > 300 ? result.substring(0, 300) + "..." : result;
+    }
+
+    /**
+     * 从 README 文本生成清理后的原文（前 2000 字符，逐行清洗）。
+     */
+    private String buildReadmeRaw(String text) {
+        if (!StringUtils.hasText(text)) {
+            return "";
+        }
+        StringBuilder result = new StringBuilder();
+        for (String line : text.split("\\R")) {
+            String cleaned = cleanReadmeLine(line);
+            if (!StringUtils.hasText(cleaned)) {
+                continue;
+            }
+            if (result.length() > 0) {
+                result.append('\n');
+            }
+            result.append(cleaned);
+            if (result.length() > 2000) {
+                break;
+            }
+        }
+        return normalizeWhitespace(result.toString());
     }
 
     private String cleanReadmeLine(String line) {
