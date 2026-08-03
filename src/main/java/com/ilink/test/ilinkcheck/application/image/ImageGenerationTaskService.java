@@ -1,5 +1,6 @@
 package com.ilink.test.ilinkcheck.application.image;
 
+import com.ilink.test.ilinkcheck.infrastructure.common.TimeoutExecutor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
@@ -25,11 +26,23 @@ public class ImageGenerationTaskService {
     @Value("${spring.ai.dashscope.api-key}")
     private String apiKey;
 
+    /** 图片生成全流程（提交+轮询+下载）的最长等待时间（毫秒），超时抛出异常。 */
+    @Value("${app.image.timeout-ms:90000}")
+    private long imageTimeoutMs = 90000;
+
     public ImageGenerationTaskService() {
         this.restClient = RestClient.builder().build();
     }
 
     public byte[] generate(String userPrompt) {
+        return TimeoutExecutor.executeOrThrow(
+                () -> doGenerate(userPrompt),
+                imageTimeoutMs,
+                "图片生成"
+        );
+    }
+
+    private byte[] doGenerate(String userPrompt) {
         try {
             log.info("Received image generation request. prompt={}", userPrompt);
 

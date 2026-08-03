@@ -30,3 +30,9 @@ app:
     voice: "longanyang"
     sample-rate: 24000
     speed: 1.0
+    # 单次语音合成最长等待时间，超时自动降级为文本回复。
+    timeout-ms: 30000
+
+  image:
+    # 图片生成全流程（提交+轮询+下载）最长等待时间，超时抛出异常。
+    timeout-ms: 90000

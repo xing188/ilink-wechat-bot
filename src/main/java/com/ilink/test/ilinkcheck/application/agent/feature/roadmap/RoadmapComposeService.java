@@ -6,6 +6,7 @@ import com.ilink.test.ilinkcheck.application.agent.dto.roadmap.RoadmapStep;
 import com.ilink.test.ilinkcheck.application.agent.dto.roadmap.SearchResult;
 import com.ilink.test.ilinkcheck.application.tool.categories.translation.TranslationService;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.ilink.test.ilinkcheck.infrastructure.common.TimeoutExecutor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,7 +21,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.Future;
 
 /**
  * 技术路线业务逻辑层（人4 核心交付之一）。
@@ -218,9 +219,9 @@ public class RoadmapComposeService {
         List<DevToArticle> truncatedArticles = truncate(articles, MAX_ARTICLES);
 
         // 先把翻译任务丢到后台，紧接着在当前线程做 LLM 编排，两者重叠执行
-        CompletableFuture<Map<String, String>> translationFuture =
+        Future<Map<String, String>> translationFuture =
                 (translate && translationService != null)
-                        ? CompletableFuture.supplyAsync(() -> batchTranslateAll(truncatedArticles, truncatedRefs))
+                        ? TimeoutExecutor.submit(() -> batchTranslateAll(truncatedArticles, truncatedRefs))
                         : CompletableFuture.completedFuture(Map.of());
 
         if (translate && translationService == null) {
@@ -229,15 +230,9 @@ public class RoadmapComposeService {
 
         RoadmapPlan plan = compose(topic, articles, references);
 
-        Map<String, String> translationMap;
-        try {
-            translationMap = translationFuture.get(translateTimeoutMs, TimeUnit.MILLISECONDS);
-        } catch (Exception e) {
-            translationFuture.cancel(true);
-            log.warn("[路线渲染] 翻译超时或失败（上限 {} ms），使用英文原文：{}",
-                    translateTimeoutMs, e.getClass().getSimpleName());
-            translationMap = Map.of();
-        }
+        // 超时/失败统一走 TimeoutExecutor 兜底（取消任务并回退英文原文）
+        Map<String, String> translationMap = TimeoutExecutor.await(
+                translationFuture, translateTimeoutMs, Map.of(), "路线翻译");
 
         return render(plan, truncatedRefs, translationMap);
     }

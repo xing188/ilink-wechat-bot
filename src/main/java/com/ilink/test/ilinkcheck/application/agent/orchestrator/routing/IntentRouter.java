@@ -2,6 +2,7 @@ package com.ilink.test.ilinkcheck.application.agent.orchestrator.routing;
 
 import com.ilink.test.ilinkcheck.application.agent.orchestrator.model.AgentTaskType;
 import com.ilink.test.ilinkcheck.application.agent.orchestrator.support.AgentTextUtils;
+import com.ilink.test.ilinkcheck.infrastructure.common.TimeoutExecutor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,8 +13,6 @@ import org.springframework.util.StringUtils;
 
 import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -30,7 +29,7 @@ import java.util.regex.Pattern;
  *       回退到原有的关键词匹配，保证旧行为不退化。</li>
  * </ol>
  *
- * <p>超时控制：LLM 路由通过 {@link CompletableFuture#get(long, TimeUnit)} 限时等待，
+ * <p>超时控制：LLM 路由通过 {@link TimeoutExecutor} 限时等待，
  * 超时后取消任务并按规则兜底，不会拖慢普通对话链路。</p>
  */
 @Slf4j
@@ -111,20 +110,16 @@ public class IntentRouter {
      * protected 便于测试覆写。
      */
     protected LlmVerdict llmRoute(String text) {
-        CompletableFuture<String> future = CompletableFuture.supplyAsync(() ->
-                routingChatClient.prompt()
+        String content = TimeoutExecutor.executeOrFallback(
+                () -> routingChatClient.prompt()
                         .system(buildSystemPrompt())
                         .user("用户消息：\n" + text)
                         .call()
-                        .content());
-        try {
-            String content = future.get(llmTimeoutMs, TimeUnit.MILLISECONDS);
-            return parseLlmResponse(content);
-        } catch (Exception e) {
-            future.cancel(true);
-            log.warn("IntentRouter llm degraded, timeoutMs={}, reason={}", llmTimeoutMs, e.getClass().getSimpleName());
-            return LlmVerdict.degraded();
-        }
+                        .content(),
+                llmTimeoutMs,
+                "",
+                "意图路由");
+        return parseLlmResponse(content);
     }
 
     /**

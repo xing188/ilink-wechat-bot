@@ -2,11 +2,13 @@ package com.ilink.test.ilinkcheck.infrastructure.ai.tts;
 
 import com.alibaba.cloud.ai.dashscope.audio.DashScopeAudioSpeechOptions;
 import com.ilink.test.ilinkcheck.application.voice.TextToSpeechService;
+import com.ilink.test.ilinkcheck.infrastructure.common.TimeoutExecutor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.audio.tts.TextToSpeechModel;
 import org.springframework.ai.audio.tts.TextToSpeechOptions;
 import org.springframework.ai.audio.tts.TextToSpeechPrompt;
 import org.springframework.ai.audio.tts.TextToSpeechResponse;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
@@ -18,6 +20,10 @@ public class DashScopeTextToSpeechServiceImpl implements TextToSpeechService {
 
     private final TextToSpeechModel textToSpeechModel;
     private final TextToSpeechOptions defaultOptions;
+
+    /** TTS 合成最长等待时间（毫秒），超时抛出异常由调用方降级为文本回复。 */
+    @Value("${app.tts.timeout-ms:30000}")
+    private long ttsTimeoutMs = 30000;
 
     public DashScopeTextToSpeechServiceImpl(TextToSpeechModel textToSpeechModel, TextToSpeechOptions defaultOptions) {
         this.textToSpeechModel = textToSpeechModel;
@@ -40,7 +46,11 @@ public class DashScopeTextToSpeechServiceImpl implements TextToSpeechService {
         }
 
         TextToSpeechPrompt prompt = new TextToSpeechPrompt(text.trim(), options);
-        TextToSpeechResponse response = textToSpeechModel.call(prompt);
+        TextToSpeechResponse response = TimeoutExecutor.executeOrThrow(
+                () -> textToSpeechModel.call(prompt),
+                ttsTimeoutMs,
+                "TTS 语音合成"
+        );
 
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
         response.getResults().forEach(speech -> {
