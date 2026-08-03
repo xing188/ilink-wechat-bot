@@ -92,7 +92,10 @@ public class RoadmapFetchPhaseExecutor implements PhaseExecutor {
             references = references.subList(take, references.size()); // 去重：提升过的不再重复展示
         }
 
-        return PhaseExecutionResult.next(AgentPhase.ROADMAP_COMPOSE, Map.of(
+        // 若用户一开始就要求中文版（如"我想学 RAG 翻译成中文"），跳过"先精简再确认"，
+        // 直接进入确认阶段由它渲染带翻译的完整版；否则进入精简版 + 询问流程。
+        AgentPhase nextPhase = translate ? AgentPhase.ROADMAP_CONFIRM_DETAIL : AgentPhase.ROADMAP_COMPOSE;
+        return PhaseExecutionResult.next(nextPhase, Map.of(
                 AgentArtifacts.REQUEST_TOPIC, topic,
                 AgentArtifacts.ROADMAP_ARTICLES, articles,
                 AgentArtifacts.ROADMAP_REFERENCES, references,

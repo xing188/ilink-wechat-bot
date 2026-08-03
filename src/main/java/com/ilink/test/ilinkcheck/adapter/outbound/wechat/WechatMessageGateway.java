@@ -91,6 +91,20 @@ public class WechatMessageGateway {
         }
     }
 
+    public void sendFile(ILinkClient client, String userId, byte[] fileBytes, String fileName, String caption) {
+        try {
+            client.sendFile(userId, fileBytes, fileName, caption);
+        }
+        catch (Exception e) {
+            log.error("Failed to send file. user={}", userId, e);
+            try {
+                sendText(client, userId, "文件发送失败，请稍后再试。");
+            }
+            catch (Exception ignored) {
+            }
+        }
+    }
+
     public byte[] downloadImage(ILinkClient client, MessageItem item) {
         try {
             return client.downloadImageFromMessageItem(item);

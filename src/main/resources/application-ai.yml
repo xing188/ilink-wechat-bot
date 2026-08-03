@@ -24,6 +24,9 @@ app:
     fetch-timeout-ms: 6000
     # 翻译最长等待时间，超时直接用英文原文回复，保证演示不卡死。
     translate-timeout-ms: 20000
+    # 思维导图 LLM 结构提炼最长等待时间（三层 prompt 输出量大，需 30~60s）。
+    # 超时直接用通用模板兜底，避免阻塞 webhook 线程直到应用关闭。
+    mindmap-timeout-ms: 60000
 
   tts:
     model: "cosyvoice-v3-flash"

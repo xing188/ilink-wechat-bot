@@ -14,6 +14,7 @@ import org.springframework.stereotype.Service;
 
 import java.net.URI;
 import java.util.ArrayList;
+import java.util.stream.Collectors;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -471,6 +472,108 @@ public class RoadmapComposeService {
      */
     public String buildReply(String topic, List<DevToArticle> articles, List<SearchResult> references) {
         return render(compose(topic, articles, references), references);
+    }
+
+    /**
+     * 渲染精简版学习路线：仅保留三个阶段与每步的标题（不带说明、不带资料链接），
+     * 末尾引导用户回复「详细」获取完整版。用于渐进式交互的「第一屏」，字数少、更浅显。
+     */
+    public String renderConcise(RoadmapPlan plan) {
+        return """
+                %s 学习路线（精简版）
+
+                ① 预备知识：%s
+                ② 核心概念：%s
+                ③ 实战建议：%s
+
+                需要带说明和资料链接的完整版吗？回复「详细」即可 ✨
+                """.formatted(
+                plan.topic(),
+                conciseStepTitles(plan.prerequisites()),
+                conciseStepTitles(plan.coreConcepts()),
+                conciseStepTitles(plan.projectIdeas())
+        ).trim();
+    }
+
+    /**
+     * 渲染配套网课视频链接区块：把一组视频/资料搜索结果渲染为带来源标注的 Markdown 列表。
+     * 用于渐进式交互的「第三屏」——用户在完整版路线后选择要视频资料时发送。
+     * 每条链接的来源（如「哔哩哔哩」）由链接域名自动推断并标注在标题旁。
+     *
+     * @param topic  学习主题，仅用于在检索为空时给出更友好的兜底提示
+     * @param videos 视频/资料搜索结果（通常来自以「bilibili / B站」为关键词的检索）
+     */
+    public String renderVideoLinks(String topic, List<SearchResult> videos) {
+        List<SearchResult> list = truncate(videos, MAX_REFERENCES);
+        if (list == null || list.isEmpty()) {
+            return "暂时没有检索到合适的 B 站网课视频，你可以直接在 B 站搜索「"
+                    + defaultText(topic, "对应主题") + " 教程」自行观看～";
+        }
+        String videoText = list.stream()
+                .map(r -> formatReferenceLine(r, Map.of()))
+                .reduce((a, b) -> a + System.lineSeparator() + b)
+                .orElse("");
+
+        return """
+                配套 B 站网课视频（来源已标注在每条链接后）
+
+                %s
+                """.formatted(videoText).trim();
+    }
+
+    /**
+     * 渲染技术路线知识点思维导图：基于已有的 RoadmapPlan 生成文字版树形结构。
+     * 该导图不包含资料链接，只聚焦「阶段 → 步骤 → 知识点」的层级关系；
+     * 作为独立内容按需生成，不会混入完整版路线。
+     *
+     * @param plan 已编排的学习路线
+     */
+    public String renderMindmap(RoadmapPlan plan) {
+        StringBuilder sb = new StringBuilder();
+        sb.append(plan.topic()).append(" — 知识点思维导图").append(System.lineSeparator());
+        sb.append("│").append(System.lineSeparator());
+
+        appendStageBranch(sb, "预备知识", plan.prerequisites(), true);
+        appendStageBranch(sb, "核心概念", plan.coreConcepts(), false);
+        appendStageBranch(sb, "实战建议", plan.projectIdeas(), false);
+
+        return sb.toString().trim();
+    }
+
+    private void appendStageBranch(StringBuilder sb, String stageName,
+                                   List<RoadmapStep> steps, boolean isFirst) {
+        String prefix = isFirst ? "├─ " : "├─ ";
+        sb.append(prefix).append(stageName);
+        if (steps == null || steps.isEmpty()) {
+            sb.append(System.lineSeparator());
+            return;
+        }
+        sb.append(System.lineSeparator());
+
+        int count = steps.size();
+        for (int i = 0; i < count; i++) {
+            boolean isLastStep = i == count - 1;
+            String stepConnector = isLastStep ? "│     └─ " : "│     ├─ ";
+            RoadmapStep step = steps.get(i);
+            sb.append(stepConnector).append(step.title());
+            if (step.description() != null && !step.description().isBlank()) {
+                sb.append("：").append(step.description());
+            }
+            sb.append(System.lineSeparator());
+        }
+        sb.append("│").append(System.lineSeparator());
+    }
+
+    /**
+     * 把步骤列表压缩为「标题1、标题2、标题3」形式的短串，用于精简版渲染。
+     */
+    private static String conciseStepTitles(List<RoadmapStep> steps) {
+        if (steps == null || steps.isEmpty()) {
+            return "（暂无）";
+        }
+        return steps.stream()
+                .map(RoadmapStep::title)
+                .collect(Collectors.joining("、"));
     }
 
     // ── 内部方法 ──
