@@ -25,4 +25,17 @@ public interface GitHubRepoProvider {
     default List<RepoTreeNode> fetchDirectoryTree(String owner, String repo, String path) {
         return java.util.Collections.emptyList();
     }
+
+    /**
+     * 获取单个文件的内容（用于目录代码讲解）。
+     * <p>默认返回 null，避免破坏未实现此方法的既有 Provider。</p>
+     *
+     * @param owner 仓库所有者
+     * @param repo  仓库名
+     * @param path  文件完整路径，如 src/main/java/App.java
+     * @return 文件文本内容；获取失败返回 null
+     */
+    default String fetchFileContent(String owner, String repo, String path) {
+        return null;
+    }
 }

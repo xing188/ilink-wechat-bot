@@ -61,9 +61,18 @@ public class GitHubSummarizePhaseExecutor implements PhaseExecutor {
                 defaultText(repoInfo.readmeSummary(), "暂无摘要")
         ).trim();
 
-        log.info("conversationId={}, phase=GITHUB_SUMMARIZE, workflow finished", conversationId);
-        // finish：任务全部结束，AgentLoopService会清理会话状态
-        return PhaseExecutionResult.finish(reply, Map.of());
+        // 速读摘要输出后暂停，询问用户是否需要继续分析核心目录架构；
+        // 用户回复「好」后由 GITHUB_DIRECTORY_ANALYZE 阶段执行目录分析，回复「不用」则结束。
+        String askDirectory = reply + "\n\n👉 需要我继续分析它的核心目录架构吗？回复「好」查看，回复「不用」跳过。";
+        log.info("conversationId={}, phase=GITHUB_SUMMARIZE, ask for directory analysis", conversationId);
+        return PhaseExecutionResult.waitForUser(
+                AgentPhase.GITHUB_DIRECTORY_ANALYZE,
+                askDirectory,
+                Map.of(
+                        AgentArtifacts.REQUEST_REPOSITORY, repoInfo.owner() + "/" + repoInfo.name(),
+                        AgentArtifacts.REPO_INFO, repoInfo
+                )
+        );
     }
 
     /**

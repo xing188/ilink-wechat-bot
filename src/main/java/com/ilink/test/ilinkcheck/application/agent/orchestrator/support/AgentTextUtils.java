@@ -276,6 +276,32 @@ public final class AgentTextUtils {
     }
 
     /**
+     * 判断用户消息是否为目录路径（如 main、src/main、docs/guide/）。
+     * 用于 GitHub 目录架构分析完成后，识别"回复目录名继续展开"的后续指令。
+     */
+    public static boolean isDirectoryPath(String text) {
+        if (!StringUtils.hasText(text)) {
+            return false;
+        }
+        String normalized = text.trim().replaceAll("/+$", "");
+        return !normalized.isEmpty() && normalized.matches("[A-Za-z0-9._-]+(/[A-Za-z0-9._-]+)*");
+    }
+
+    /**
+     * 从用户消息中提取目录路径（去掉末尾斜杠）；非目录路径返回 empty。
+     */
+    public static Optional<String> extractDirectoryPath(String text) {
+        if (!StringUtils.hasText(text)) {
+            return Optional.empty();
+        }
+        String normalized = text.trim().replaceAll("/+$", "");
+        if (normalized.isEmpty() || !normalized.matches("[A-Za-z0-9._-]+(/[A-Za-z0-9._-]+)*")) {
+            return Optional.empty();
+        }
+        return Optional.of(normalized);
+    }
+
+    /**
      * 判断用户消息里是否已经包含可审稿的正文。
      */
     public static Optional<String> extractDraftText(String text) {

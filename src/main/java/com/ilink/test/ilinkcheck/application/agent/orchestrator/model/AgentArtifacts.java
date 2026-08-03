@@ -16,6 +16,7 @@ public final class AgentArtifacts {
     public static final String REQUEST_SCHEDULE_MATCHED_TEXT = "requestScheduleMatchedText";
 
     public static final String REPO_INFO = "repoInfo";
+    public static final String GITHUB_PATH_INDEX = "githubPathIndex";
     public static final String TRENDING_REPOS = "trendingRepos";
     public static final String ROADMAP_ARTICLES = "roadmapArticles";
     public static final String ROADMAP_REFERENCES = "roadmapReferences";
