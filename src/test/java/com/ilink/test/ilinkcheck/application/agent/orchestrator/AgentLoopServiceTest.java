@@ -246,6 +246,36 @@ class AgentLoopServiceTest {
         assertThat(reply.get()).contains("RAG 学习路线");
     }
 
+    @Test
+    void shouldLetUnrelatedMessagePassWhenRoadmapFinished() {
+        // 已完成路线后收到无关消息（如天气查询），应放行给普通对话链路，而不是被"已生成完毕"提示拦截
+        AgentLoopService agentLoopService = createAgentLoopService();
+
+        agentLoopService.tryHandle("conv-12", "我想学 eBPF，帮我规划学习路线");
+        Optional<String> reply = agentLoopService.tryHandle("conv-12", "杭州今天天气怎么样");
+
+        assertThat(reply).isEmpty();
+    }
+
+    @Test
+    void shouldTranslateRoadmapOnFollowUpAfterFinished() {
+        // 已完成路线后，明确的"翻译成中文"仍应恢复工作流重渲染
+        RoadmapComposeService composeService = new RoadmapComposeService();
+        composeService.setTranslationService(new TranslationService() {
+            @Override public String translate(String text, String src, String tgt) { return "【译】" + text; }
+            @Override public java.util.List<String> batchTranslate(java.util.List<String> texts, String src, String tgt) {
+                return texts.stream().map(t -> "【译】" + t).toList();
+            }
+        });
+        AgentLoopService agentLoopService = createAgentLoopService(composeService);
+
+        agentLoopService.tryHandle("conv-13", "我想学 eBPF，帮我规划学习路线");
+        Optional<String> reply = agentLoopService.tryHandle("conv-13", "翻译成中文");
+
+        assertThat(reply).isPresent();
+        assertThat(reply.get()).contains("【译】");
+    }
+
     private AgentLoopService createAgentLoopService() {
         return createAgentLoopService(new RoadmapComposeService());
     }
