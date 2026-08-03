@@ -13,6 +13,8 @@ public record TrendingRepo(
 
     public enum MetricType {
         DAILY_STARS("今日新增 Star"),
+        WEEKLY_STARS("本周新增 Star"),
+        MONTHLY_STARS("本月新增 Star"),
         TOTAL_STARS("当前 Star");
 
         private final String label;

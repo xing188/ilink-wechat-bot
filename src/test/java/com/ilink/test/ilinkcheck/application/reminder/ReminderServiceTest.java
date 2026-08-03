@@ -5,6 +5,8 @@ import com.ilink.test.ilinkcheck.application.reminder.model.ReminderRecord;
 import com.ilink.test.ilinkcheck.application.reminder.model.ReminderRecurrence;
 import com.ilink.test.ilinkcheck.application.reminder.model.ReminderStatus;
 import com.ilink.test.ilinkcheck.application.reminder.parser.ReminderParser;
+import com.ilink.test.ilinkcheck.application.schedule.ScheduleParser;
+import com.ilink.test.ilinkcheck.application.schedule.model.ScheduleIntervalUnit;
 import com.ilink.test.ilinkcheck.infrastructure.scheduler.ReminderScheduler;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -30,7 +32,7 @@ class ReminderServiceTest {
         ReminderRepository repository = mock(ReminderRepository.class);
         when(repository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
-        ReminderService service = new ReminderService(repository, new ReminderParser(),
+        ReminderService service = new ReminderService(repository, new ReminderParser(new ScheduleParser()),
                 mock(ReminderScheduler.class), fixedClock(2026, 7, 23, 11, 0));
 
         String result = service.createReminder("user-1", "今天下午5点给张三发个微信消息");
@@ -50,7 +52,7 @@ class ReminderServiceTest {
         ReminderRepository repository = mock(ReminderRepository.class);
         when(repository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
-        ReminderService service = new ReminderService(repository, new ReminderParser(),
+        ReminderService service = new ReminderService(repository, new ReminderParser(new ScheduleParser()),
                 mock(ReminderScheduler.class), fixedClock(2026, 7, 23, 7, 0));
         ReminderRecord reminder = new ReminderRecord(
                 "id-1",
@@ -63,6 +65,8 @@ class ReminderServiceTest {
                 ReminderStatus.ACTIVE,
                 zoneId.getId(),
                 instant(2026, 7, 23, 8, 0),
+                null,
+                null,
                 null,
                 instant(2026, 7, 23, 7, 0),
                 instant(2026, 7, 23, 7, 0),
@@ -92,6 +96,8 @@ class ReminderServiceTest {
                 zoneId.getId(),
                 instant(2026, 7, 23, 11, 10),
                 null,
+                null,
+                null,
                 instant(2026, 7, 23, 11, 0),
                 instant(2026, 7, 23, 11, 0),
                 null,
@@ -99,13 +105,46 @@ class ReminderServiceTest {
         );
         when(repository.findPendingByUser("user-1")).thenReturn(List.of(reminder));
 
-        ReminderService service = new ReminderService(repository, new ReminderParser(),
+        ReminderService service = new ReminderService(repository, new ReminderParser(new ScheduleParser()),
                 mock(ReminderScheduler.class), fixedClock(2026, 7, 23, 11, 0));
 
         String result = service.listPendingReminders("user-1");
 
         assertThat(result).contains("当前待办提醒");
         assertThat(result).contains("[10分钟后] 开会");
+    }
+
+    @Test
+    void shouldRescheduleIntervalReminderAfterFire() {
+        ReminderRepository repository = mock(ReminderRepository.class);
+        when(repository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        ReminderService service = new ReminderService(repository, new ReminderParser(new ScheduleParser()),
+                mock(ReminderScheduler.class), fixedClock(2026, 8, 1, 10, 0));
+        ReminderRecord reminder = new ReminderRecord(
+                "id-3",
+                "user-1",
+                "复盘",
+                "每两周提醒我复盘",
+                "每2周",
+                ReminderRecurrence.INTERVAL,
+                ReminderAction.NONE,
+                ReminderStatus.ACTIVE,
+                zoneId.getId(),
+                instant(2026, 8, 15, 10, 0),
+                null,
+                2,
+                ScheduleIntervalUnit.WEEK,
+                instant(2026, 8, 1, 10, 0),
+                instant(2026, 8, 1, 10, 0),
+                null,
+                null
+        );
+
+        ReminderRecord updated = service.acknowledgeFired(reminder, instant(2026, 8, 15, 10, 1));
+
+        assertThat(updated.status()).isEqualTo(ReminderStatus.ACTIVE);
+        assertThat(updated.nextFireAt()).isEqualTo(instant(2026, 8, 29, 10, 0));
     }
 
     private Clock fixedClock(int year, int month, int day, int hour, int minute) {

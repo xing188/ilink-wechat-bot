@@ -108,8 +108,27 @@ public class AgentLoopService {
             return "已取消当前 Agent 工作流。";
         }
 
+        Optional<AgentTaskType> reroutedTask = intentRouter.route(userMessage);
+        if (reroutedTask.isPresent() && reroutedTask.get() != state.getTaskType()) {
+            agentStateStore.remove(state.getConversationId());
+            log.info("conversationId={}, fromTaskType={}, toTaskType={}, workflowEvent=route-jump",
+                    state.getConversationId(), state.getTaskType(), reroutedTask.get());
+            String fresh = startNewWorkflow(conversationId, userMessage);
+            return fresh != null ? fresh : "我理解了你的新请求，但暂时没能启动对应流程，请再说具体一点。";
+        }
+
+        // 新的学习请求：丢弃旧路线工作流，开启一条同类型的新路线
+        if (state.getTaskType() == AgentTaskType.TECH_ROADMAP
+                && AgentTextUtils.extractTopic(userMessage).isPresent()) {
+            agentStateStore.remove(state.getConversationId());
+            log.info("conversationId={}, agentTaskType={}, workflowEvent=restart",
+                    state.getConversationId(), state.getTaskType());
+            String fresh = startNewWorkflow(conversationId, userMessage);
+            return fresh != null ? fresh : "已重新开始，请告诉我你想学的技术主题。";
+        }
+
         // 后续指令：把已生成的技术路线翻译成中文版（复用上次取到的资料重新渲染）
-        if (AgentTextUtils.wantsChinese(userMessage)) {
+        if (state.getTaskType() == AgentTaskType.TECH_ROADMAP && AgentTextUtils.wantsChinese(userMessage)) {
             state.putArtifact(AgentArtifacts.ROADMAP_TRANSLATE, true);
             state.updateLatestUserMessage(userMessage);
             state.clearWaitingUserInput();
@@ -117,15 +136,6 @@ public class AgentLoopService {
             log.info("conversationId={}, agentTaskType={}, workflowEvent=translate",
                     state.getConversationId(), state.getTaskType());
             return runWorkflow(state);
-        }
-
-        // 新的学习请求：丢弃旧工作流，开启一条新路线
-        if (AgentTextUtils.extractTopic(userMessage).isPresent()) {
-            agentStateStore.remove(state.getConversationId());
-            log.info("conversationId={}, agentTaskType={}, workflowEvent=restart",
-                    state.getConversationId(), state.getTaskType());
-            String fresh = startNewWorkflow(conversationId, userMessage);
-            return fresh != null ? fresh : "已重新开始，请告诉我你想学的技术主题。";
         }
 
         // 已完成的工作流收到无关消息：给出友好提示，避免误入 FINISH 阶段执行器

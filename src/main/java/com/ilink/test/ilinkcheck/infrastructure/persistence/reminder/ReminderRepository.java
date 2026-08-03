@@ -5,6 +5,7 @@ import com.ilink.test.ilinkcheck.application.reminder.model.ReminderAction;
 import com.ilink.test.ilinkcheck.application.reminder.model.ReminderRecord;
 import com.ilink.test.ilinkcheck.application.reminder.model.ReminderRecurrence;
 import com.ilink.test.ilinkcheck.application.reminder.model.ReminderStatus;
+import com.ilink.test.ilinkcheck.application.schedule.model.ScheduleIntervalUnit;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Repository;
@@ -216,6 +217,8 @@ public class ReminderRepository implements com.ilink.test.ilinkcheck.application
         task.setTimezone(reminder.timezone());
         task.setNextFireAt(reminder.nextFireAt());
         task.setCronExpression(reminder.cronExpression());
+        task.setIntervalValue(reminder.intervalValue());
+        task.setIntervalUnit(reminder.intervalUnit() != null ? reminder.intervalUnit().name() : null);
         task.setCreatedAt(reminder.createdAt());
         task.setUpdatedAt(reminder.updatedAt());
         task.setCompletedAt(reminder.completedAt());
@@ -236,6 +239,8 @@ public class ReminderRepository implements com.ilink.test.ilinkcheck.application
                 task.getTimezone(),
                 task.getNextFireAt(),
                 task.getCronExpression(),
+                task.getIntervalValue(),
+                StringUtils.hasText(task.getIntervalUnit()) ? ScheduleIntervalUnit.valueOf(task.getIntervalUnit()) : null,
                 task.getCreatedAt(),
                 task.getUpdatedAt(),
                 task.getCompletedAt(),

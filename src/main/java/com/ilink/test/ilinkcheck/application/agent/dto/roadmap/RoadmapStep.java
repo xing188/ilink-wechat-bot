@@ -3,8 +3,8 @@ package com.ilink.test.ilinkcheck.application.agent.dto.roadmap;
 /**
  * 学习路线中的单个步骤。
  *
- * <p>每个步骤包含标题和详细说明。详细说明字段预留用于后续 LLM CoT 编排
- * 或人工补充具体知识点（例如"语法"步骤下写明"变量/循环/指针"等）。</p>
+ * 每个步骤包含标题和详细说明。详细说明字段预留用于后续 LLM CoT 编排
+ * 或人工补充具体知识点（例如"语法"步骤下写明"变量/循环/指针"等）。
  */
 public record RoadmapStep(
         String title,

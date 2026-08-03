@@ -24,6 +24,13 @@ public final class AgentTextUtils {
     // 主题字符类在 ASCII 基础上额外支持中文（\u4e00-\u9fa5），并允许单个空格分隔的多词主题（如 Spring AI）。
     private static final Pattern LEARN_TOPIC = Pattern.compile("(?:学习路线|路线规划|我想学(?!习)|学习|入门)\\s*([A-Za-z0-9+#._\\u4e00-\\u9fa5]+(?:\\s[A-Za-z0-9+#._\\u4e00-\\u9fa5]+)*)");
     private static final Pattern TIME_PATTERN = Pattern.compile("\\b([01]?\\d|2[0-3]):([0-5]\\d)\\b");
+    private static final Pattern CHINESE_TIME_PATTERN = Pattern.compile(
+            "(?:(?<day>今天|明天|后天|每天|每日)\\s*)?"
+                    + "(?<period>凌晨|清晨|今晨|今早|早晨|早上|上午|中午|下午|傍晚|晚上|今晚|晚间)?\\s*"
+                    + "(?<hour>[0-9零〇一二两三四五六七八九十]+)\\s*(?:点|时)"
+                    + "(?:\\s*(?<minute>[0-9零〇一二两三四五六七八九十]+|半)\\s*(?:分|分钟)?)?"
+    );
+    private static final Pattern PERIOD_ONLY_PATTERN = Pattern.compile("凌晨|清晨|今晨|今早|早晨|早上|上午|中午|下午|傍晚|晚上|今晚|晚间");
 
     // 翻译意图关键词：用户希望把英文资料翻译成中文时使用的表达。
     // 用正则整体匹配，避免"中文"这类子串在其它语境下误触发（如"中文文档"属正常主题）。
@@ -42,6 +49,29 @@ public final class AgentTextUtils {
     );
 
     private AgentTextUtils() {
+    }
+
+    public enum ScheduleTimeStatus {
+        RESOLVED,
+        AMBIGUOUS,
+        ABSENT
+    }
+
+    public record ScheduleTimeParseResult(
+            ScheduleTimeStatus status,
+            String normalizedTime,
+            String matchedText,
+            Integer hour,
+            Integer minute
+    ) {
+
+        public boolean resolved() {
+            return status == ScheduleTimeStatus.RESOLVED && StringUtils.hasText(normalizedTime);
+        }
+
+        public boolean ambiguous() {
+            return status == ScheduleTimeStatus.AMBIGUOUS;
+        }
     }
 
     /**
@@ -161,14 +191,88 @@ public final class AgentTextUtils {
      * 从用户输入中提取晨报订阅时间。
      */
     public static Optional<String> extractScheduleTime(String text) {
+        ScheduleTimeParseResult parsed = parseScheduleTime(text);
+        return parsed.resolved() ? Optional.of(parsed.normalizedTime()) : Optional.empty();
+    }
+
+    /**
+     * 解析晨报订阅时间。
+     * 支持 24 小时制（08:30）和中文自然表达（早上九点、下午三点半）。
+     * 若仅说“9点推送”这类无法判断上午/下午的表达，则返回 AMBIGUOUS，让上层继续追问。
+     */
+    public static ScheduleTimeParseResult parseScheduleTime(String text) {
+        if (!StringUtils.hasText(text)) {
+            return new ScheduleTimeParseResult(ScheduleTimeStatus.ABSENT, null, null, null, null);
+        }
+
+        Matcher exactMatcher = TIME_PATTERN.matcher(text);
+        if (exactMatcher.find()) {
+            return new ScheduleTimeParseResult(
+                    ScheduleTimeStatus.RESOLVED,
+                    exactMatcher.group(),
+                    exactMatcher.group(),
+                    Integer.parseInt(exactMatcher.group(1)),
+                    Integer.parseInt(exactMatcher.group(2))
+            );
+        }
+
+        Matcher chineseMatcher = CHINESE_TIME_PATTERN.matcher(text);
+        if (!chineseMatcher.find()) {
+            return new ScheduleTimeParseResult(ScheduleTimeStatus.ABSENT, null, null, null, null);
+        }
+
+        int hour = parseChineseNumber(chineseMatcher.group("hour"));
+        String minuteText = chineseMatcher.group("minute");
+        int minute = "半".equals(minuteText) ? 30 : (StringUtils.hasText(minuteText) ? parseChineseNumber(minuteText) : 0);
+        if (minute < 0 || minute > 59 || hour < 0 || hour > 23) {
+            return new ScheduleTimeParseResult(ScheduleTimeStatus.ABSENT, null, chineseMatcher.group(), hour, minute);
+        }
+
+        String period = normalizeSchedulePeriod(chineseMatcher.group("period")).orElse(null);
+        if (!StringUtils.hasText(period) && hour >= 1 && hour <= 12) {
+            return new ScheduleTimeParseResult(ScheduleTimeStatus.AMBIGUOUS, null, chineseMatcher.group(), hour, minute);
+        }
+
+        int normalizedHour = to24Hour(hour, period);
+        if (normalizedHour < 0 || normalizedHour > 23) {
+            return new ScheduleTimeParseResult(ScheduleTimeStatus.ABSENT, null, chineseMatcher.group(), hour, minute);
+        }
+        return new ScheduleTimeParseResult(
+                ScheduleTimeStatus.RESOLVED,
+                "%02d:%02d".formatted(normalizedHour, minute),
+                chineseMatcher.group(),
+                hour,
+                minute
+        );
+    }
+
+    /**
+     * 提取“上午/下午/晚上”这类时段补充。
+     * 用于接住上一轮已经识别出“9点”，下一轮只回复“上午/下午”的场景。
+     */
+    public static Optional<String> extractSchedulePeriod(String text) {
         if (!StringUtils.hasText(text)) {
             return Optional.empty();
         }
-        Matcher matcher = TIME_PATTERN.matcher(text);
+        Matcher matcher = PERIOD_ONLY_PATTERN.matcher(text);
         if (!matcher.find()) {
             return Optional.empty();
         }
-        return Optional.of(matcher.group());
+        return normalizeSchedulePeriod(matcher.group());
+    }
+
+    /**
+     * 将 12 小时制候选时间和用户补充的上午/下午拼成最终 HH:mm。
+     */
+    public static Optional<String> composeScheduleTime(Integer hour, Integer minute, String period) {
+        if (hour == null || minute == null || !StringUtils.hasText(period)) {
+            return Optional.empty();
+        }
+        if (hour < 1 || hour > 12 || minute < 0 || minute > 59) {
+            return Optional.empty();
+        }
+        int normalizedHour = to24Hour(hour, period);
+        return Optional.of("%02d:%02d".formatted(normalizedHour, minute));
     }
 
     /**
@@ -183,5 +287,83 @@ public final class AgentTextUtils {
             return Optional.of(normalized);
         }
         return Optional.empty();
+    }
+
+    private static Optional<String> normalizeSchedulePeriod(String rawPeriod) {
+        if (!StringUtils.hasText(rawPeriod)) {
+            return Optional.empty();
+        }
+        return Optional.of(switch (rawPeriod.trim()) {
+            case "清晨", "今晨", "今早", "早晨", "早上" -> "上午";
+            case "晚间", "今晚", "傍晚" -> "晚上";
+            default -> rawPeriod.trim();
+        });
+    }
+
+    private static int to24Hour(int hour, String period) {
+        if (!StringUtils.hasText(period)) {
+            return hour;
+        }
+        return switch (period) {
+            case "凌晨" -> hour == 12 ? 0 : hour;
+            case "上午" -> hour == 12 ? 0 : hour;
+            case "中午" -> hour == 12 ? 12 : hour + 12;
+            case "下午" -> hour == 12 ? 12 : hour + 12;
+            case "晚上" -> hour == 12 ? 0 : hour + 12;
+            default -> hour;
+        };
+    }
+
+    private static int parseChineseNumber(String value) {
+        if (!StringUtils.hasText(value)) {
+            throw new IllegalArgumentException("时间数字不能为空");
+        }
+
+        String normalized = value.replace('两', '二').replace("〇", "零").trim();
+        if (normalized.matches("\\d+")) {
+            return Integer.parseInt(normalized);
+        }
+
+        return switch (normalized) {
+            case "零" -> 0;
+            case "一" -> 1;
+            case "二" -> 2;
+            case "三" -> 3;
+            case "四" -> 4;
+            case "五" -> 5;
+            case "六" -> 6;
+            case "七" -> 7;
+            case "八" -> 8;
+            case "九" -> 9;
+            case "十" -> 10;
+            default -> parseChineseTens(normalized);
+        };
+    }
+
+    private static int parseChineseTens(String value) {
+        if (!value.contains("十")) {
+            throw new IllegalArgumentException("暂时只支持 0-99 的中文数字");
+        }
+
+        String[] parts = value.split("十", -1);
+        int tens = StringUtils.hasText(parts[0]) ? parseSingleChineseDigit(parts[0]) : 1;
+        int ones = parts.length > 1 && StringUtils.hasText(parts[1]) ? parseSingleChineseDigit(parts[1]) : 0;
+        return tens * 10 + ones;
+    }
+
+    private static int parseSingleChineseDigit(String value) {
+        return switch (value) {
+            case "零" -> 0;
+            case "一" -> 1;
+            case "二" -> 2;
+            case "三" -> 3;
+            case "四" -> 4;
+            case "五" -> 5;
+            case "六" -> 6;
+            case "七" -> 7;
+            case "八" -> 8;
+            case "九" -> 9;
+            default -> throw new IllegalArgumentException("暂时只支持 0-99 的中文数字");
+        };
     }
 }

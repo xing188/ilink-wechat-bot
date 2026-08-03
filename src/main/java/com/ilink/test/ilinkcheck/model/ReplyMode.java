@@ -1,9 +1,9 @@
 package com.ilink.test.ilinkcheck.model;
 
 public enum ReplyMode {
-    /** 普通文本回复：超过长度阈值时自动转为 Word 文档。 */
+    /** 普通文本回复：直接以聊天文本返回。 */
     TEXT,
-    /** 强制文本回复：无论多长都以纯文本发送，不转 Word 文档（适用于路线/报告等结构化输出）。 */
+    /** 强制文本回复：保留给显式要求纯文本直出的场景。 */
     FORCE_TEXT,
     AUDIO_FILE
 }

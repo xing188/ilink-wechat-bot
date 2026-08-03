@@ -9,6 +9,7 @@ import com.ilink.test.ilinkcheck.application.agent.spi.mcp.GitHubRepoProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.client.ClientHttpRequestFactory;
 import org.springframework.http.client.JdkClientHttpRequestFactory;
@@ -23,6 +24,7 @@ import java.security.GeneralSecurityException;
 import java.security.SecureRandom;
 import java.security.cert.X509Certificate;
 import java.time.Duration;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -40,13 +42,16 @@ public class GitHubApiClient implements GitHubRepoProvider {
 
     private static final Logger log = LoggerFactory.getLogger(GitHubApiClient.class);
     private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+    private static final Duration COMMUNITY_API_RETRY_COOLDOWN = Duration.ofMinutes(10);
 
     private final RestClient restClient;
     private final RestClient trendingClient;
+    private volatile Instant communityApiRetryAfter = Instant.EPOCH;
 
     @Value("${app.github.trending-path:/repositories}")
     private String trendingPath = "/repositories";
 
+    @Autowired
     public GitHubApiClient(RestClient.Builder restClientBuilder,
                            @Value("${app.github.api-base:https://api.github.com}") String apiBase,
                            @Value("${app.github.token:}") String token,
@@ -73,6 +78,16 @@ public class GitHubApiClient implements GitHubRepoProvider {
                 .defaultHeader("User-Agent", "ilink-wechat-bot/1.0")
                 .build()
                 : null;
+    }
+
+    /**
+     * 兼容旧测试/旧调用方的 4 参数构造器。
+     */
+    public GitHubApiClient(RestClient.Builder restClientBuilder,
+                           String apiBase,
+                           String token,
+                           String trendingApiUrl) {
+        this(restClientBuilder, apiBase, token, trendingApiUrl, false);
     }
 
     @Override
@@ -108,14 +123,23 @@ public class GitHubApiClient implements GitHubRepoProvider {
 
     @Override
     public List<TrendingRepo> fetchTrending(String language, String since) {
-        if (trendingClient != null) {
+        if (trendingClient != null && isCommunityApiAvailable()) {
             try {
-                return fetchTrendingFromCommunityApi(language, since);
+                List<TrendingRepo> repos = fetchTrendingFromCommunityApi(language, since);
+                communityApiRetryAfter = Instant.EPOCH;
+                return repos;
             } catch (Exception e) {
-                log.warn("Community trending API failed, fallback to official search API", e);
+                communityApiRetryAfter = Instant.now().plus(COMMUNITY_API_RETRY_COOLDOWN);
+                log.warn("Community trending API unavailable: {}. Fallback to official search API until {}.",
+                        summarizeException(e), communityApiRetryAfter);
+                log.debug("Community trending API failure details", e);
             }
         }
         return fetchTrendingFromSearch(language, since);
+    }
+
+    private boolean isCommunityApiAvailable() {
+        return Instant.now().isAfter(communityApiRetryAfter);
     }
 
     private List<TrendingRepo> fetchTrendingFromCommunityApi(String language, String since) {
@@ -139,6 +163,7 @@ public class GitHubApiClient implements GitHubRepoProvider {
         }
 
         List<TrendingRepo> repos = new ArrayList<>();
+        TrendingRepo.MetricType metricType = metricTypeForSince(since);
         for (JsonNode item : items) {
             String url = item.path("url").asText("");
             String owner = firstText(item, "author", "username");
@@ -153,7 +178,7 @@ public class GitHubApiClient implements GitHubRepoProvider {
                     item.path("language").asText(null),
                     stars,
                     url,
-                    TrendingRepo.MetricType.DAILY_STARS,
+                    metricType,
                     TrendingRepo.Source.COMMUNITY_TRENDING_API
             ));
         }
@@ -229,25 +254,66 @@ public class GitHubApiClient implements GitHubRepoProvider {
 
             byte[] decoded = Base64.getMimeDecoder().decode(readmeResp.content());
             String text = new String(decoded, StandardCharsets.UTF_8);
-            String[] lines = text.split("\n");
             StringBuilder summary = new StringBuilder();
-            for (String line : lines) {
-                String trimmed = line.strip();
-                if (trimmed.isEmpty() || trimmed.startsWith("#") || trimmed.startsWith("![")
-                        || trimmed.startsWith("<") || trimmed.startsWith("```")) {
+            boolean collecting = false;
+            for (String line : text.split("\\R")) {
+                String cleaned = cleanReadmeLine(line);
+                if (!StringUtils.hasText(cleaned)) {
+                    if (collecting) {
+                        break;
+                    }
                     continue;
                 }
-                summary.append(trimmed).append(" ");
+
+                collecting = true;
+                if (summary.length() > 0) {
+                    summary.append(' ');
+                }
+                summary.append(cleaned);
                 if (summary.length() > 300) {
                     break;
                 }
             }
-            String result = summary.toString().strip();
+            String result = normalizeWhitespace(summary.toString());
             return result.length() > 300 ? result.substring(0, 300) + "..." : result;
         } catch (Exception e) {
             log.warn("Failed to decode README summary for repo={}/{}", owner, repo, e);
             return "";
         }
+    }
+
+    private String cleanReadmeLine(String line) {
+        if (!StringUtils.hasText(line)) {
+            return "";
+        }
+
+        String trimmed = line.strip();
+        if (!StringUtils.hasText(trimmed) || trimmed.startsWith("#") || trimmed.startsWith("```")
+                || trimmed.startsWith("<") || trimmed.startsWith("<!--")) {
+            return "";
+        }
+
+        String cleaned = trimmed
+                .replaceAll("\\[!\\[[^\\]]*\\]\\([^)]*\\)\\]\\([^)]*\\)", "")
+                .replaceAll("!\\[[^\\]]*\\]\\([^)]*\\)", "")
+                .replaceAll("\\[([^\\]]+)\\]\\(([^)]+)\\)", "$1")
+                .replaceAll("<[^>]+>", "")
+                .replaceAll("^[\\s\\-•*\\d.]+", "")
+                .replaceAll("\\s+", " ")
+                .trim();
+
+        if (!StringUtils.hasText(cleaned)) {
+            return "";
+        }
+
+        return cleaned.replaceAll("^[\\p{Punct}\\s]+", "").trim();
+    }
+
+    private String normalizeWhitespace(String text) {
+        if (!StringUtils.hasText(text)) {
+            return "";
+        }
+        return text.replaceAll("\\s+", " ").trim();
     }
 
     private String detectTechStack(String primaryLanguage, List<String> topics) {
@@ -333,6 +399,29 @@ public class GitHubApiClient implements GitHubRepoProvider {
         } catch (GeneralSecurityException e) {
             throw new IllegalStateException("Failed to initialize GitHub client SSL context", e);
         }
+    }
+
+    private String summarizeException(Throwable throwable) {
+        Throwable root = throwable;
+        while (root.getCause() != null && root.getCause() != root) {
+            root = root.getCause();
+        }
+        String message = root.getMessage();
+        if (!StringUtils.hasText(message)) {
+            return root.getClass().getSimpleName();
+        }
+        return root.getClass().getSimpleName() + ": " + message;
+    }
+
+    private TrendingRepo.MetricType metricTypeForSince(String since) {
+        if (!StringUtils.hasText(since)) {
+            return TrendingRepo.MetricType.DAILY_STARS;
+        }
+        return switch (since.trim().toLowerCase()) {
+            case "weekly" -> TrendingRepo.MetricType.WEEKLY_STARS;
+            case "monthly" -> TrendingRepo.MetricType.MONTHLY_STARS;
+            default -> TrendingRepo.MetricType.DAILY_STARS;
+        };
     }
 
     // --- GitHub REST API response DTOs ---

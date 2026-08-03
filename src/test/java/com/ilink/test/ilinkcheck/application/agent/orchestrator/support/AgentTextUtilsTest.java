@@ -93,4 +93,32 @@ class AgentTextUtilsTest {
         Optional<String> topic = AgentTextUtils.extractTopic("我想学习rag");
         assertThat(topic).contains("RAG");
     }
+
+    @Test
+    void shouldResolveMorningChineseScheduleTime() {
+        AgentTextUtils.ScheduleTimeParseResult result = AgentTextUtils.parseScheduleTime("早上九点推送技术晨报");
+        assertThat(result.status()).isEqualTo(AgentTextUtils.ScheduleTimeStatus.RESOLVED);
+        assertThat(result.normalizedTime()).isEqualTo("09:00");
+    }
+
+    @Test
+    void shouldResolveEveningHalfPastChineseScheduleTime() {
+        AgentTextUtils.ScheduleTimeParseResult result = AgentTextUtils.parseScheduleTime("晚上九点半推送");
+        assertThat(result.status()).isEqualTo(AgentTextUtils.ScheduleTimeStatus.RESOLVED);
+        assertThat(result.normalizedTime()).isEqualTo("21:30");
+    }
+
+    @Test
+    void shouldMarkBareHourAsAmbiguous() {
+        AgentTextUtils.ScheduleTimeParseResult result = AgentTextUtils.parseScheduleTime("9点推送技术晨报");
+        assertThat(result.status()).isEqualTo(AgentTextUtils.ScheduleTimeStatus.AMBIGUOUS);
+        assertThat(result.matchedText()).contains("9点");
+    }
+
+    @Test
+    void shouldExtractSchedulePeriodOnlyFromFollowUpReply() {
+        assertThat(AgentTextUtils.extractSchedulePeriod("上午")).contains("上午");
+        assertThat(AgentTextUtils.composeScheduleTime(9, 0, "上午")).contains("09:00");
+        assertThat(AgentTextUtils.composeScheduleTime(9, 30, "下午")).contains("21:30");
+    }
 }

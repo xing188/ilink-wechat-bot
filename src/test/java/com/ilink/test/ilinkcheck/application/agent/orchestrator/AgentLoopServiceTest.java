@@ -15,6 +15,9 @@ import com.ilink.test.ilinkcheck.application.agent.orchestrator.phase.github.Git
 import com.ilink.test.ilinkcheck.application.agent.orchestrator.phase.review.ReviewCollectDraftPhaseExecutor;
 import com.ilink.test.ilinkcheck.application.agent.orchestrator.phase.review.ReviewConfirmPhaseExecutor;
 import com.ilink.test.ilinkcheck.application.agent.orchestrator.phase.review.ReviewFixGeneratePhaseExecutor;
+import com.ilink.test.ilinkcheck.application.agent.feature.digest.DailyDigestComposeService;
+import com.ilink.test.ilinkcheck.application.agent.feature.digest.DailyDigestSubscriptionService;
+import com.ilink.test.ilinkcheck.application.agent.feature.digest.DigestSubscriptionRepository;
 import com.ilink.test.ilinkcheck.application.agent.feature.roadmap.RoadmapComposeService;
 import com.ilink.test.ilinkcheck.application.agent.orchestrator.phase.roadmap.RoadmapComposePhaseExecutor;
 import com.ilink.test.ilinkcheck.application.agent.orchestrator.phase.roadmap.RoadmapFetchPhaseExecutor;
@@ -26,14 +29,23 @@ import com.ilink.test.ilinkcheck.application.agent.spi.mcp.DevToArticleProvider;
 import com.ilink.test.ilinkcheck.application.agent.spi.mcp.GitHubRepoProvider;
 import com.ilink.test.ilinkcheck.application.agent.spi.mcp.WebSearchProvider;
 import com.ilink.test.ilinkcheck.application.agent.spi.rag.StyleGuideRetriever;
+import com.ilink.test.ilinkcheck.adapter.inbound.wechat.WechatBotRuntime;
+import com.ilink.test.ilinkcheck.adapter.outbound.wechat.WechatMessageGateway;
+import com.ilink.test.ilinkcheck.infrastructure.document.DocumentExportService;
+import com.ilink.test.ilinkcheck.infrastructure.persistence.digest.InMemoryDigestSubscriptionRepository;
+import com.ilink.test.ilinkcheck.infrastructure.scheduler.digest.TechDigestScheduler;
 import com.ilink.test.ilinkcheck.application.tool.categories.translation.TranslationService;
 import com.ilink.test.ilinkcheck.infrastructure.document.DocumentExportService;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.scheduling.TaskScheduler;
 
+import java.time.Clock;
 import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
 
 /**
  * Agent 大循环最小可运行测试。
@@ -159,11 +171,38 @@ class AgentLoopServiceTest {
         Optional<String> secondReply = agentLoopService.tryHandle("conv-4", "每天 08:30 推送");
 
         assertThat(firstReply).isPresent();
-        assertThat(firstReply.get()).contains("每天几点推送技术晨报");
+        assertThat(firstReply.get()).contains("推送技术晨报");
         assertThat(secondReply).isPresent();
-        assertThat(secondReply.get()).contains("已为你记录技术晨报订阅时间：08:30");
-        assertThat(secondReply.get()).contains("晨报预览");
+        assertThat(secondReply.get()).contains("已为你记录技术推送计划：每天 08:30");
+        assertThat(secondReply.get()).contains("推送预览");
         assertThat(secondReply.get()).contains("今日新增 Star");
+    }
+
+    @Test
+    void shouldAskForMeridiemWhenDigestTimeIsAmbiguousThenAcceptClarification() {
+        AgentLoopService agentLoopService = createAgentLoopService();
+
+        Optional<String> firstReply = agentLoopService.tryHandle("conv-10", "帮我订阅技术晨报，9点推送");
+        Optional<String> secondReply = agentLoopService.tryHandle("conv-10", "上午");
+
+        assertThat(firstReply).isPresent();
+        assertThat(firstReply.get()).contains("还不确定是上午还是下午");
+        assertThat(secondReply).isPresent();
+        assertThat(secondReply.get()).contains("已为你记录技术推送计划：每天 09:00");
+    }
+
+    @Test
+    void shouldJumpToNewRouteWhenDifferentIntentArrivesDuringDigestWorkflow() {
+        AgentLoopService agentLoopService = createAgentLoopService();
+
+        Optional<String> firstReply = agentLoopService.tryHandle("conv-11", "帮我订阅技术晨报");
+        Optional<String> secondReply = agentLoopService.tryHandle("conv-11", "帮我速读一下 https://github.com/spring-projects/spring-ai");
+
+        assertThat(firstReply).isPresent();
+        assertThat(firstReply.get()).contains("推送技术晨报");
+        assertThat(secondReply).isPresent();
+        assertThat(secondReply.get()).contains("GitHub 仓库速读");
+        assertThat(secondReply.get()).contains("spring-projects/spring-ai");
     }
 
     @Test
@@ -252,6 +291,31 @@ class AgentLoopServiceTest {
         );
 
         DraftReviewService draftReviewService = new DraftReviewService(styleGuideRetriever, new DocumentExportService());
+        DailyDigestComposeService digestComposeService = new DailyDigestComposeService(
+                gitHubRepoProvider,
+                devToArticleProvider,
+                "java",
+                "daily",
+                3,
+                "ai",
+                3
+        );
+        DigestSubscriptionRepository digestSubscriptionRepository = new InMemoryDigestSubscriptionRepository();
+        @SuppressWarnings("unchecked")
+        ObjectProvider<WechatBotRuntime> runtimeProvider = mock(ObjectProvider.class);
+        TechDigestScheduler techDigestScheduler = new TechDigestScheduler(
+                digestSubscriptionRepository,
+                runtimeProvider,
+                new WechatMessageGateway(),
+                mock(TaskScheduler.class),
+                digestComposeService
+        );
+        DailyDigestSubscriptionService dailyDigestSubscriptionService = new DailyDigestSubscriptionService(
+                digestSubscriptionRepository,
+                techDigestScheduler,
+                Clock.systemDefaultZone(),
+                "Asia/Shanghai"
+        );
 
         List<PhaseExecutor> executors = List.of(
                 new GitHubFetchPhaseExecutor(gitHubRepoProvider),
@@ -263,7 +327,7 @@ class AgentLoopServiceTest {
                 new DocReviewPhaseExecutor(draftReviewService),
                 new ReviewFixGeneratePhaseExecutor(draftReviewService),
                 new DigestCollectSchedulePhaseExecutor(),
-                new DigestComposePhaseExecutor(gitHubRepoProvider, devToArticleProvider)
+                new DigestComposePhaseExecutor(digestComposeService, dailyDigestSubscriptionService)
         );
 
         return new AgentLoopService(
