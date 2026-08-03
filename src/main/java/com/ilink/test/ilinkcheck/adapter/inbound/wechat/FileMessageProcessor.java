@@ -2,6 +2,7 @@ package com.ilink.test.ilinkcheck.adapter.inbound.wechat;
 
 import com.github.wechat.ilink.sdk.ILinkClient;
 import com.github.wechat.ilink.sdk.core.model.MessageItem;
+
 import com.ilink.test.ilinkcheck.adapter.outbound.wechat.WechatMessageGateway;
 import com.ilink.test.ilinkcheck.application.conversation.ConversationService;
 import com.ilink.test.ilinkcheck.application.reminder.context.ReminderRequestContext;
