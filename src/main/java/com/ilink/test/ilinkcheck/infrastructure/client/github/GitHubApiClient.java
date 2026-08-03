@@ -115,7 +115,8 @@ public class GitHubApiClient implements GitHubRepoProvider {
                     response.stars(),
                     response.forks(),
                     fetchReadmeSummary(owner, repo),
-                    detectTechStack(response.language(), response.topics())
+                    detectTechStack(response.language(), response.topics()),
+                    fetchReadmeRaw(owner, repo)
             );
         } catch (RestClientResponseException e) {
             throw translateException("fetchRepo", e);
@@ -337,6 +338,39 @@ public class GitHubApiClient implements GitHubRepoProvider {
             return result.length() > 300 ? result.substring(0, 300) + "..." : result;
         } catch (Exception e) {
             log.warn("Failed to decode README summary for repo={}/{}", owner, repo, e);
+            return "";
+        }
+    }
+
+    private String fetchReadmeRaw(String owner, String repo) {
+        try {
+            ApiReadmeResponse readmeResp = restClient.get()
+                    .uri("/repos/{owner}/{repo}/readme", owner, repo)
+                    .retrieve()
+                    .body(ApiReadmeResponse.class);
+            if (readmeResp == null || !StringUtils.hasText(readmeResp.content())) {
+                return "";
+            }
+
+            byte[] decoded = Base64.getMimeDecoder().decode(readmeResp.content());
+            String text = new String(decoded, StandardCharsets.UTF_8);
+            StringBuilder result = new StringBuilder();
+            for (String line : text.split("\\R")) {
+                String cleaned = cleanReadmeLine(line);
+                if (!StringUtils.hasText(cleaned)) {
+                    continue;
+                }
+                if (result.length() > 0) {
+                    result.append('\n');
+                }
+                result.append(cleaned);
+                if (result.length() > 2000) {
+                    break;
+                }
+            }
+            return normalizeWhitespace(result.toString());
+        } catch (Exception e) {
+            log.warn("Failed to fetch raw README for repo={}/{}", owner, repo, e);
             return "";
         }
     }

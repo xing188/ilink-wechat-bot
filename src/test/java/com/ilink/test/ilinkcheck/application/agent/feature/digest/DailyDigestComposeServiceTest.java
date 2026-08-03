@@ -91,7 +91,8 @@ class DailyDigestComposeServiceTest {
                                 [![Build status](https://img.shields.io/github/actions/workflow/status/openai/codex/ci.yml)](https://github.com/openai/codex/actions)
                                 This project helps build AI apps with Spring.
                                 """,
-                        "Java / Spring Boot"
+                        "Java / Spring Boot",
+                        ""
                 );
             }
 

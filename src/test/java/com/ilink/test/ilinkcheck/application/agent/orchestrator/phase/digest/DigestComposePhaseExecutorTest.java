@@ -43,7 +43,8 @@ class DigestComposePhaseExecutorTest {
                         999,
                         45,
                         "Spring AI 是一个用于构建 AI 应用的开源项目。",
-                        "Java / Spring Boot"
+                        "Java / Spring Boot",
+                        ""
                 );
             }
 

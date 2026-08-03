@@ -82,7 +82,8 @@ public class GitHubFetchPhaseExecutor implements PhaseExecutor {
         // 产出工件，流转至摘要阶段
         return PhaseExecutionResult.next(AgentPhase.GITHUB_SUMMARIZE, Map.of(
                 AgentArtifacts.REQUEST_REPOSITORY, owner + "/" + repoName,
-                AgentArtifacts.REPO_INFO, repoInfo
+                AgentArtifacts.REPO_INFO, repoInfo,
+                AgentArtifacts.README_RAW, repoInfo.readmeRaw() != null ? repoInfo.readmeRaw() : ""
         ));
     }
 }

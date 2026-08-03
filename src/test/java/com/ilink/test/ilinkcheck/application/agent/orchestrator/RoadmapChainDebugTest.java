@@ -39,6 +39,7 @@ import com.ilink.test.ilinkcheck.config.AgentMockConfig;
 import com.ilink.test.ilinkcheck.infrastructure.persistence.digest.InMemoryDigestSubscriptionRepository;
 import com.ilink.test.ilinkcheck.infrastructure.scheduler.digest.TechDigestScheduler;
 import org.junit.jupiter.api.Test;
+import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.scheduling.TaskScheduler;
 
@@ -49,6 +50,7 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 /**
  * 人4 调试用冒烟测试：直接装配 AgentLoopService（不走 Spring / 不调网络），
@@ -133,7 +135,7 @@ class RoadmapChainDebugTest {
 
         List<PhaseExecutor> executors = List.of(
                 new GitHubFetchPhaseExecutor(gitHubRepoProvider),
-                new GitHubSummarizePhaseExecutor(),
+                new GitHubSummarizePhaseExecutor(mockChatClient()),
                 new GitHubDirectoryAnalyzePhaseExecutor(
                         new com.ilink.test.ilinkcheck.application.agent.feature.github.GitHubRepoDigestService(gitHubRepoProvider)),
                 new GitHubDirectoryExpandPhaseExecutor(
@@ -155,5 +157,16 @@ class RoadmapChainDebugTest {
                 new PhaseExecutorRegistry(executors),
                 new InMemoryAgentStateStore()
         );
+    }
+
+    private static ChatClient mockChatClient() {
+        ChatClient chatClient = mock(ChatClient.class);
+        ChatClient.ChatClientRequestSpec requestSpec = mock(ChatClient.ChatClientRequestSpec.class);
+        ChatClient.CallResponseSpec responseSpec = mock(ChatClient.CallResponseSpec.class);
+        when(chatClient.prompt()).thenReturn(requestSpec);
+        when(requestSpec.user(org.mockito.ArgumentMatchers.anyString())).thenReturn(requestSpec);
+        when(requestSpec.call()).thenReturn(responseSpec);
+        when(responseSpec.content()).thenReturn("LLM 摘要测试内容");
+        return chatClient;
     }
 }

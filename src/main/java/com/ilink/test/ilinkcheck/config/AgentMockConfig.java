@@ -37,7 +37,8 @@ public class AgentMockConfig {
                         1280,
                         156,
                         "README 重点介绍了如何用 Spring Boot 和 Spring AI 搭建一个可扩展的 Agent 项目。",
-                        "Java / Spring Boot / Spring AI"
+                        "Java / Spring Boot / Spring AI",
+                        "本项目演示了如何用 Spring Boot 和 Spring AI 搭建可扩展的 Agent 项目，涵盖多 Agent 协同、路由和工具编排。"
                 );
             }
 
