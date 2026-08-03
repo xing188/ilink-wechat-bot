@@ -20,6 +20,7 @@ import org.springframework.util.StringUtils;
 import java.time.Clock;
 import java.time.ZonedDateTime;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.regex.Matcher;
@@ -77,6 +78,16 @@ public class DigestCollectSchedulePhaseExecutor implements PhaseExecutor {
      */
     @Override
     public PhaseExecutionResult execute(AgentState state) {
+        // 优先级0：取消订阅指令（如"取消晨报""退订"），在时间解析之前处理
+        if (isCancelSubscriptionIntent(state.getLatestUserMessage())) {
+            boolean cancelled = dailyDigestSubscriptionService != null
+                    && dailyDigestSubscriptionService.cancel(state.getConversationId());
+            return PhaseExecutionResult.finish(
+                    cancelled ? "✅ 已取消技术晨报订阅，不再定时推送。" : "当前没有技术晨报订阅。",
+                    clearPendingArtifacts()
+            );
+        }
+
         // 优先判断：是否存在上一轮未收集完成的【待补齐定时文本】
         // 如果存在，进入多轮拼接逻辑
         PhaseExecutionResult pendingFollowUp = continuePendingSchedule(state);
@@ -102,6 +113,24 @@ public class DigestCollectSchedulePhaseExecutor implements PhaseExecutor {
 
         String prompt = StringUtils.hasText(latest.prompt()) ? latest.prompt() : defaultDigestPrompt();
         return waitForUser(prompt, pendingArtifacts(state.getLatestUserMessage()));
+    }
+
+    /**
+     * 判断是否为取消订阅指令。
+     */
+    private boolean isCancelSubscriptionIntent(String text) {
+        if (!StringUtils.hasText(text)) {
+            return false;
+        }
+        String normalized = text.trim();
+        return containsAny(normalized, List.of(
+                "取消晨报", "取消订阅", "退订", "不订了", "不要晨报",
+                "停止晨报", "别推送了", "取消技术晨报"
+        ));
+    }
+
+    private boolean containsAny(String text, List<String> candidates) {
+        return candidates.stream().anyMatch(text::contains);
     }
 
     /**

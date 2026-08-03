@@ -245,6 +245,31 @@ class AgentLoopServiceTest {
     }
 
     @Test
+    void shouldCancelDigestSubscription() {
+        AgentLoopService agentLoopService = createAgentLoopService();
+
+        // 先完成订阅
+        agentLoopService.tryHandle("conv-19", "订阅晨报");
+        agentLoopService.tryHandle("conv-19", "每天 08:30 推送");
+
+        // 再取消订阅
+        Optional<String> reply = agentLoopService.tryHandle("conv-19", "取消晨报");
+
+        assertThat(reply).isPresent();
+        assertThat(reply.get()).contains("已取消技术晨报订阅");
+    }
+
+    @Test
+    void shouldReportNoSubscriptionWhenCancellingWithoutOne() {
+        AgentLoopService agentLoopService = createAgentLoopService();
+
+        Optional<String> reply = agentLoopService.tryHandle("conv-21", "取消晨报");
+
+        assertThat(reply).isPresent();
+        assertThat(reply.get()).contains("当前没有技术晨报订阅");
+    }
+
+    @Test
     void shouldAskForMeridiemWhenDigestTimeIsAmbiguousThenAcceptClarification() {
         AgentLoopService agentLoopService = createAgentLoopService();
 
@@ -458,7 +483,7 @@ class AgentLoopServiceTest {
                 new ReviewCollectDraftPhaseExecutor(),
                 new DocReviewPhaseExecutor(draftReviewService),
                 new ReviewFixGeneratePhaseExecutor(draftReviewService),
-                new DigestCollectSchedulePhaseExecutor(),
+                new DigestCollectSchedulePhaseExecutor(dailyDigestSubscriptionService),
                 new DigestComposePhaseExecutor(digestComposeService, dailyDigestSubscriptionService)
         );
 
