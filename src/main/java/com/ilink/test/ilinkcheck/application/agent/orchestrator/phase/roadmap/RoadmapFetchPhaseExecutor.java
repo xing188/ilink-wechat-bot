@@ -6,20 +6,20 @@ import com.ilink.test.ilinkcheck.application.agent.orchestrator.model.*;
 import com.ilink.test.ilinkcheck.application.agent.orchestrator.support.AgentTextUtils;
 import com.ilink.test.ilinkcheck.application.agent.spi.mcp.DevToArticleProvider;
 import com.ilink.test.ilinkcheck.application.agent.spi.mcp.WebSearchProvider;
+import com.ilink.test.ilinkcheck.infrastructure.common.TimeoutExecutor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.Future;
 
 /**
  * 学习路线第一阶段。
  * 先提取学习主题，再拉取 Dev.to 文章和 WebSearch 参考资料。
  *
- * <p>性能：两个外部数据源互不依赖，采用 {@link CompletableFuture} 并发拉取，
+ * <p>性能：两个外部数据源互不依赖，通过 {@link TimeoutExecutor} 并发拉取，
  * 总耗时从「两者之和」降为「两者较慢的那个」；并对单个来源设置超时，
  * 任一来源卡住时按空结果继续，避免整条链路被拖死。</p>
  */
@@ -64,15 +64,15 @@ public class RoadmapFetchPhaseExecutor implements PhaseExecutor {
                 || AgentTextUtils.wantsChinese(state.getOriginalUserMessage());
 
         // 注意：保留主题原始大小写（如 eBPF），大小写归一化交给 Provider 实现决定（Dev.to 标签本身大小写不敏感）。
-        // 两个来源并发拉取：总耗时 = max(A, B) 而不是 A + B。
+        // 两个来源先提交到后台线程池再等待：总耗时 = max(A, B) 而不是 A + B。
         long startMs = System.currentTimeMillis();
-        CompletableFuture<List<DevToArticle>> articleFuture =
-                CompletableFuture.supplyAsync(() -> devToArticleProvider.fetchByTag(topic, 3));
-        CompletableFuture<List<SearchResult>> referenceFuture =
-                CompletableFuture.supplyAsync(() -> webSearchProvider.search(topic + " tutorial", 2));
+        Future<List<DevToArticle>> articleFuture = TimeoutExecutor.submit(
+                () -> devToArticleProvider.fetchByTag(topic, 3));
+        Future<List<SearchResult>> referenceFuture = TimeoutExecutor.submit(
+                () -> webSearchProvider.search(topic + " tutorial", 2));
 
-        List<DevToArticle> articles = awaitOrEmpty(articleFuture, "Dev.to 文章");
-        List<SearchResult> references = awaitOrEmpty(referenceFuture, "补充检索");
+        List<DevToArticle> articles = TimeoutExecutor.await(articleFuture, fetchTimeoutMs, List.of(), "Dev.to 文章");
+        List<SearchResult> references = TimeoutExecutor.await(referenceFuture, fetchTimeoutMs, List.of(), "补充检索");
         log.info("[路线抓取] 主题={} 并发抓取完成，文章 {} 篇 / 参考 {} 条，耗时 {} ms",
                 topic, articles.size(), references.size(), System.currentTimeMillis() - startMs);
 
@@ -98,22 +98,6 @@ public class RoadmapFetchPhaseExecutor implements PhaseExecutor {
                 AgentArtifacts.ROADMAP_REFERENCES, references,
                 AgentArtifacts.ROADMAP_TRANSLATE, translate
         ));
-    }
-
-    /**
-     * 等待单个数据源结果；超时或异常时返回空列表并记录日志，保证路线仍能正常产出。
-     * 超时后取消任务，避免僵尸线程继续占用连接。
-     */
-    private <T> List<T> awaitOrEmpty(CompletableFuture<List<T>> future, String sourceName) {
-        try {
-            List<T> result = future.get(fetchTimeoutMs, TimeUnit.MILLISECONDS);
-            return result == null ? List.of() : result;
-        } catch (Exception e) {
-            future.cancel(true);
-            log.warn("[路线抓取] {} 获取失败或超时（上限 {} ms），按空结果继续：{}",
-                    sourceName, fetchTimeoutMs, e.getClass().getSimpleName());
-            return List.of();
-        }
     }
 
     /**
