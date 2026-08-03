@@ -71,10 +71,27 @@ public class AgentLoopService {
 
         Optional<AgentState> existingState = agentStateStore.findActive(normalizedConversationId);
         if (existingState.isPresent()) {
-            return Optional.of(resumeWorkflow(existingState.get(), normalizedConversationId, normalizedUserMessage));
+            AgentState state = existingState.get();
+            // 已完成的工作流（技术路线保留态）只响应明确的后续指令（取消/翻译成中文/新的学习主题）；
+            // 无关消息（如天气查询等普通请求）直接放行给普通对话/工具链路，
+            // 避免被"上一条学习路线已生成完毕"等提示错误拦截。
+            if (state.isFinished() && !isRoadmapFollowUp(normalizedUserMessage)) {
+                return Optional.empty();
+            }
+            return Optional.of(resumeWorkflow(state, normalizedConversationId, normalizedUserMessage));
         }
 
         return Optional.ofNullable(startNewWorkflow(normalizedConversationId, normalizedUserMessage));
+    }
+
+    /**
+     * 已完成的工作流是否收到明确的后续指令。
+     * 只有这类消息才应恢复保留态工作流，其余消息一律放行。
+     */
+    private boolean isRoadmapFollowUp(String userMessage) {
+        return isCancelCommand(userMessage)
+                || AgentTextUtils.wantsChinese(userMessage)
+                || AgentTextUtils.extractTopic(userMessage).isPresent();
     }
 
     /**
