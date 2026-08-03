@@ -61,6 +61,15 @@ class IntentRouterTest {
     }
 
     @Test
+    void longTextShortCircuitsEvenWhenLlmSaysNone() {
+        IntentRouter router = llmRouter(mockChatClient("{\"task\": \"NONE\"}"));
+        // 用户粘贴长文章（含换行/代码块）属于高置信信号，不应被 LLM NONE 短路，
+        // 否则审稿流程无法触发、监控台也看不到事件。
+        String longDraft = "这是我写的 Redis延迟排查草稿。\n\n```\nINFO commandstats\n```\n\n这篇文章主要讨论 redis延迟 的排查路径。";
+        assertThat(router.route(longDraft)).contains(AgentTaskType.DOC_REVIEW);
+    }
+
+    @Test
     void llmEmptyContentFallsBackToRule() {
         IntentRouter router = llmRouter(mockChatClient(null));
         assertThat(router.route("我想学 eBPF，帮我规划学习路线"))

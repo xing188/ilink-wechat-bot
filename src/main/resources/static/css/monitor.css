@@ -1,0 +1,233 @@
+:root {
+    --bg-0: #0b0f1a;
+    --bg-1: #111827;
+    --panel: rgba(255, 255, 255, 0.04);
+    --panel-border: rgba(255, 255, 255, 0.09);
+    --text-1: #e5e7eb;
+    --text-2: #9ca3af;
+    --text-3: #6b7280;
+    --accent-1: #22d3ee;
+    --accent-2: #a78bfa;
+    --green: #4ade80;
+    --red: #f87171;
+    --amber: #fbbf24;
+    --blue: #60a5fa;
+    --violet: #a78bfa;
+    --teal: #2dd4bf;
+    --mono: "JetBrains Mono", "Cascadia Code", Consolas, "Courier New", monospace;
+}
+
+* { box-sizing: border-box; }
+
+body {
+    margin: 0;
+    min-height: 100vh;
+    color: var(--text-1);
+    font-family: -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: radial-gradient(1200px 600px at 15% -10%, rgba(34, 211, 238, 0.14), transparent 60%),
+                radial-gradient(1000px 700px at 95% 10%, rgba(167, 139, 250, 0.12), transparent 55%),
+                linear-gradient(180deg, var(--bg-0), var(--bg-1));
+    overflow-x: hidden;
+}
+
+.bg-decoration {
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    background-image:
+        linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+    background-size: 44px 44px;
+    mask-image: radial-gradient(ellipse 90% 70% at 50% 30%, black 30%, transparent 75%);
+    -webkit-mask-image: radial-gradient(ellipse 90% 70% at 50% 30%, black 30%, transparent 75%);
+}
+
+/* ── 顶栏 ── */
+.topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 28px;
+    border-bottom: 1px solid var(--panel-border);
+    backdrop-filter: blur(12px);
+    background: rgba(11, 15, 26, 0.6);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+.brand { display: flex; align-items: center; gap: 14px; }
+.brand h1 { margin: 0; font-size: 19px; font-weight: 600; letter-spacing: 0.5px; }
+.brand-sub { font-size: 12px; color: var(--text-3); }
+.logo-icon {
+    width: 40px; height: 40px;
+    display: grid; place-items: center;
+    color: var(--accent-1);
+    background: linear-gradient(135deg, rgba(34,211,238,0.14), rgba(167,139,250,0.14));
+    border: 1px solid var(--panel-border);
+    border-radius: 12px;
+}
+.top-actions { display: flex; align-items: center; gap: 12px; }
+
+.conn {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 12px; color: var(--text-2);
+    padding: 6px 12px;
+    border: 1px solid var(--panel-border);
+    border-radius: 999px;
+}
+.conn-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--amber); box-shadow: 0 0 8px var(--amber); }
+.conn.online .conn-dot { background: var(--green); box-shadow: 0 0 8px var(--green); }
+.conn.offline .conn-dot { background: var(--red); box-shadow: 0 0 8px var(--red); }
+
+.ghost-btn {
+    padding: 6px 12px;
+    border: 1px solid var(--panel-border);
+    border-radius: 8px;
+    background: transparent;
+    color: var(--text-2);
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.ghost-btn:hover { color: var(--text-1); border-color: rgba(255,255,255,0.25); }
+.back-link {
+    color: var(--text-2); text-decoration: none; font-size: 13px;
+    padding: 8px 14px; border: 1px solid var(--panel-border); border-radius: 999px;
+    transition: all 0.2s;
+}
+.back-link:hover { color: var(--text-1); border-color: rgba(255,255,255,0.25); }
+
+/* ── 统计条 ── */
+.stats-bar {
+    display: flex; gap: 14px; flex-wrap: wrap;
+    padding: 16px 28px 4px;
+    max-width: 1440px; margin: 0 auto;
+}
+.stat {
+    display: flex; align-items: baseline; gap: 8px;
+    padding: 10px 16px;
+    border: 1px solid var(--panel-border);
+    border-radius: 12px;
+    background: var(--panel);
+    backdrop-filter: blur(10px);
+}
+.stat b { font-size: 20px; font-family: var(--mono); color: var(--accent-1); }
+.stat span { font-size: 12px; color: var(--text-3); }
+
+/* ── 会话卡片 ── */
+.conv-list {
+    max-width: 1440px;
+    margin: 0 auto;
+    padding: 14px 28px 40px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+.empty-state {
+    text-align: center; color: var(--text-3);
+    padding: 60px 20px;
+}
+.empty-icon { opacity: 0.5; margin-bottom: 12px; }
+.empty-state p { margin: 0; font-size: 13px; line-height: 1.9; }
+
+.conv-card {
+    background: var(--panel);
+    border: 1px solid var(--panel-border);
+    border-radius: 14px;
+    backdrop-filter: blur(14px);
+    overflow: hidden;
+    animation: cardIn 0.3s ease;
+}
+@keyframes cardIn {
+    from { opacity: 0; transform: translateY(-6px); }
+    to { opacity: 1; transform: none; }
+}
+.conv-head {
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--panel-border);
+    flex-wrap: wrap;
+}
+.conv-id { font-family: var(--mono); font-size: 12px; color: var(--text-2); }
+.task-badge {
+    font-size: 11px; font-weight: 600;
+    padding: 3px 10px; border-radius: 999px; letter-spacing: 0.3px;
+}
+.task-GITHUB_REPO_DIGEST { color: var(--accent-1); background: rgba(34,211,238,0.12); }
+.task-TECH_ROADMAP { color: var(--violet); background: rgba(167,139,250,0.12); }
+.task-DOC_REVIEW { color: var(--amber); background: rgba(251,191,36,0.12); }
+.task-DAILY_DIGEST_SUBSCRIBE { color: var(--blue); background: rgba(96,165,250,0.12); }
+.task-null { color: var(--text-2); background: rgba(255,255,255,0.08); }
+
+.status-pill { margin-left: auto; font-size: 12px; padding: 3px 10px; border-radius: 999px; }
+.status-run { color: var(--green); background: rgba(74,222,128,0.12); }
+.status-wait { color: var(--amber); background: rgba(251,191,36,0.12); }
+.status-done { color: var(--violet); background: rgba(167,139,250,0.12); }
+.status-cancel { color: var(--red); background: rgba(248,113,113,0.12); }
+.status-fail { color: var(--red); background: rgba(248,113,113,0.12); }
+
+.conv-ctx {
+    display: flex; gap: 8px; flex-wrap: wrap;
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--panel-border);
+    background: rgba(255,255,255,0.02);
+}
+.ctx-chip {
+    font-size: 11.5px; font-family: var(--mono);
+    color: var(--text-2);
+    padding: 3px 10px;
+    border: 1px solid var(--panel-border);
+    border-radius: 999px;
+    background: rgba(255,255,255,0.03);
+    max-width: 320px;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.ctx-chip b { color: var(--accent-1); font-weight: 600; margin-right: 4px; }
+
+.conv-log { padding: 10px 16px 8px; }
+.log-line {
+    display: flex; align-items: baseline; gap: 10px;
+    padding: 4px 0;
+    font-size: 12.5px;
+    line-height: 1.6;
+    border-bottom: 1px dashed rgba(255,255,255,0.04);
+}
+.log-line:last-child { border-bottom: none; }
+.log-time { font-family: var(--mono); font-size: 11px; color: var(--text-3); white-space: nowrap; }
+.event-badge {
+    font-size: 11px; font-weight: 600;
+    padding: 2px 8px; border-radius: 6px;
+    white-space: nowrap;
+}
+.ev-start { color: var(--green); background: rgba(74,222,128,0.12); }
+.ev-phase { color: var(--text-2); background: rgba(255,255,255,0.07); }
+.ev-wait-user-input { color: var(--amber); background: rgba(251,191,36,0.12); }
+.ev-resume { color: var(--blue); background: rgba(96,165,250,0.12); }
+.ev-finish { color: var(--violet); background: rgba(167,139,250,0.14); }
+.ev-cancel { color: var(--red); background: rgba(248,113,113,0.12); }
+.ev-fail { color: var(--red); background: rgba(248,113,113,0.12); }
+.ev-translate, .ev-restart, .ev-expand-directory, .ev-route-jump { color: var(--teal); background: rgba(45,212,191,0.12); }
+
+.phase-tag { font-family: var(--mono); font-size: 11px; color: var(--text-3); white-space: nowrap; }
+.log-msg {
+    color: var(--text-2);
+    flex: 1;
+    min-width: 0;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.log-msg.user { color: var(--accent-1); }
+.log-msg.reply { color: var(--text-2); }
+
+.conv-foot {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 8px 16px 12px;
+    font-size: 11.5px; color: var(--text-3);
+}
+.elapsed { font-family: var(--mono); }
+
+.hidden { display: none !important; }
+
+@media (max-width: 760px) {
+    .topbar { padding: 12px 16px; flex-wrap: wrap; gap: 8px; }
+    .stats-bar, .conv-list { padding-left: 16px; padding-right: 16px; }
+}

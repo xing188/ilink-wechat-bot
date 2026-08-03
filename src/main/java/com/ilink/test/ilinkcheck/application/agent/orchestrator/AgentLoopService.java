@@ -11,10 +11,14 @@ import com.ilink.test.ilinkcheck.application.agent.orchestrator.runtime.AgentSta
 import com.ilink.test.ilinkcheck.application.agent.orchestrator.runtime.PhaseExecutorRegistry;
 import com.ilink.test.ilinkcheck.application.agent.orchestrator.runtime.WorkflowTemplateRegistry;
 import com.ilink.test.ilinkcheck.application.agent.orchestrator.support.AgentTextUtils;
+import com.ilink.test.ilinkcheck.infrastructure.monitor.AgentEvent;
+import com.ilink.test.ilinkcheck.infrastructure.monitor.AgentEventBus;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
+import java.time.Instant;
 import java.util.Optional;
 
 /**
@@ -47,6 +51,9 @@ public class AgentLoopService {
     private final PhaseExecutorRegistry phaseExecutorRegistry;
     private final AgentStateStore agentStateStore;
 
+    /** 运行时事件总线（监控台用）。可选注入，未注入时跳过事件发布。 */
+    private AgentEventBus agentEventBus;
+
     public AgentLoopService(IntentRouter intentRouter,
                             WorkflowTemplateRegistry workflowTemplateRegistry,
                             PhaseExecutorRegistry phaseExecutorRegistry,
@@ -55,6 +62,11 @@ public class AgentLoopService {
         this.workflowTemplateRegistry = workflowTemplateRegistry;
         this.phaseExecutorRegistry = phaseExecutorRegistry;
         this.agentStateStore = agentStateStore;
+    }
+
+    @Autowired(required = false)
+    public void setAgentEventBus(AgentEventBus agentEventBus) {
+        this.agentEventBus = agentEventBus;
     }
 
     /**
@@ -118,7 +130,7 @@ public class AgentLoopService {
                 userMessage
         );
         log.info("conversationId={}, agentTaskType={}, workflowEvent=start", conversationId, taskType.get());
-
+        publishEvent(state, "start", null);
         return runWorkflow(state);
     }
 
@@ -130,6 +142,7 @@ public class AgentLoopService {
             agentStateStore.remove(state.getConversationId());
             log.info("conversationId={}, agentTaskType={}, workflowEvent=cancel",
                     state.getConversationId(), state.getTaskType());
+            publishEvent(state, "cancel", "已取消当前 Agent 工作流。");
             return "已取消当前 Agent 工作流。";
         }
 
@@ -138,6 +151,7 @@ public class AgentLoopService {
             agentStateStore.remove(state.getConversationId());
             log.info("conversationId={}, fromTaskType={}, toTaskType={}, workflowEvent=route-jump",
                     state.getConversationId(), state.getTaskType(), reroutedTask.get());
+            publishEvent(state, "route-jump", "切换到 " + reroutedTask.get().name());
             String fresh = startNewWorkflow(conversationId, userMessage);
             return fresh != null ? fresh : "我理解了你的新请求，但暂时没能启动对应流程，请再说具体一点。";
         }
@@ -148,6 +162,7 @@ public class AgentLoopService {
             agentStateStore.remove(state.getConversationId());
             log.info("conversationId={}, agentTaskType={}, workflowEvent=restart",
                     state.getConversationId(), state.getTaskType());
+            publishEvent(state, "restart", "重新开始新的学习路线");
             String fresh = startNewWorkflow(conversationId, userMessage);
             return fresh != null ? fresh : "已重新开始，请告诉我你想学的技术主题。";
         }
@@ -160,6 +175,7 @@ public class AgentLoopService {
             state.moveToPhase(AgentPhase.ROADMAP_COMPOSE);
             log.info("conversationId={}, agentTaskType={}, workflowEvent=translate",
                     state.getConversationId(), state.getTaskType());
+            publishEvent(state, "translate", "将学习路线翻译成中文");
             return runWorkflow(state);
         }
 
@@ -173,6 +189,7 @@ public class AgentLoopService {
                 state.moveToPhase(AgentPhase.GITHUB_DIRECTORY_EXPAND);
                 log.info("conversationId={}, agentTaskType={}, workflowEvent=expand-directory",
                         state.getConversationId(), state.getTaskType());
+                publishEvent(state, "expand-directory", "展开目录：" + userMessage);
                 return runWorkflow(state);
             }
             return "上一条学习路线已生成完毕。回复“翻译成中文”可切换为中文版，或发送新的“我想学 X”开始新路线。";
@@ -185,6 +202,7 @@ public class AgentLoopService {
         }
         log.info("conversationId={}, agentTaskType={}, currentPhase={}, workflowEvent=resume",
                 state.getConversationId(), state.getTaskType(), state.getCurrentPhase());
+        publishEvent(state, "resume", null);
         return runWorkflow(state);
     }
 
@@ -210,6 +228,7 @@ public class AgentLoopService {
                 }
                 log.info("conversationId={}, agentTaskType={}, workflowEvent=finish, rounds={}",
                         state.getConversationId(), state.getTaskType(), state.getExecutionRound());
+                publishEvent(state, "finish", state.getFinalReply());
                 return state.getFinalReply();
             }
 
@@ -220,6 +239,7 @@ public class AgentLoopService {
                 agentStateStore.save(state);
                 log.info("conversationId={}, agentTaskType={}, currentPhase={}, resumePhase={}, workflowEvent=wait-user-input",
                         state.getConversationId(), state.getTaskType(), state.getCurrentPhase(), resumePhase);
+                publishEvent(state, "wait-user-input", result.replyToUser());
                 return StringUtils.hasText(result.replyToUser())
                         ? result.replyToUser()
                         : "请继续提供下一步信息。";
@@ -229,6 +249,7 @@ public class AgentLoopService {
                 break;
             }
 
+            publishEvent(state, "phase", result.replyToUser());
             state.moveToPhase(result.nextPhase());
             state.clearWaitingUserInput();
             agentStateStore.save(state);
@@ -238,7 +259,41 @@ public class AgentLoopService {
         agentStateStore.remove(state.getConversationId());
         log.warn("conversationId={}, agentTaskType={}, workflowEvent=fail-max-steps, rounds={}",
                 state.getConversationId(), state.getTaskType(), state.getExecutionRound());
+        publishEvent(state, "fail", state.getFinalReply());
         return state.getFinalReply();
+    }
+
+    /**
+     * 发布 Agent 运行时事件（监控台用）。事件总线未注入时静默跳过。
+     */
+    private void publishEvent(AgentState state, String eventName, String reply) {
+        if (agentEventBus == null) {
+            return;
+        }
+        agentEventBus.publish(new AgentEvent(
+                Instant.now(),
+                state.getConversationId(),
+                state.getTaskType(),
+                state.getCurrentPhase(),
+                eventName,
+                truncate(state.getLatestUserMessage(), 120),
+                truncate(reply, 200),
+                state.getArtifact(AgentArtifacts.REQUEST_TOPIC, String.class),
+                state.getArtifact(AgentArtifacts.REQUEST_REPOSITORY, String.class),
+                truncate(state.getArtifact(AgentArtifacts.REQUEST_DRAFT, String.class), 100),
+                state.getArtifact(AgentArtifacts.REQUEST_SCHEDULE_TIME, String.class)
+        ));
+    }
+
+    private String truncate(String text, int max) {
+        if (!StringUtils.hasText(text)) {
+            return null;
+        }
+        String trimmed = text.trim();
+        if (trimmed.length() <= max) {
+            return trimmed;
+        }
+        return trimmed.substring(0, max) + "…";
     }
 
     /**
