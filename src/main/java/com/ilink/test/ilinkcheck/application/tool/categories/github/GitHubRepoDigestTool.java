@@ -45,6 +45,29 @@ public class GitHubRepoDigestTool implements ChatFunctionTool {
     }
 
     @Tool(
+            name = "queryGitHubRepoDirectory",
+            description = """
+                    分析 GitHub 仓库的核心目录架构，展示模块划分与职责说明。
+                    当用户回复"看代码"、想了解仓库目录结构、模块划分、源码组织方式时使用。
+                    支持 GitHub 链接或 owner/repo 格式。
+                    返回结果已是格式化后的完整回复，请直接发送给用户。
+                    """
+    )
+    public String queryRepoDirectory(
+            @ToolParam(required = true, description = "GitHub 仓库标识，支持 owner/repo 格式或完整 GitHub 链接，例如 lodash/lodash")
+            String repository) {
+
+        String repoFull = extractRepoFull(repository);
+        if (repoFull == null) {
+            return "请提供 GitHub 仓库链接或 owner/repo 格式的仓库名，例如：lodash/lodash。";
+        }
+
+        String[] parts = repoFull.split("/", 2);
+        var nodes = gitHubRepoDigestService.fetchRootDirectory(parts[0], parts[1]);
+        return gitHubRepoDigestService.buildDirectoryArchitecture(parts[0], parts[1], nodes);
+    }
+
+    @Tool(
             name = "queryGitHubTrending",
             description = """
                     查询 GitHub 趋势仓库。支持按语言和时间范围筛选。

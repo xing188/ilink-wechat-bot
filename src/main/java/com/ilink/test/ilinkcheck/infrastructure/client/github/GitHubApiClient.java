@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.ilink.test.ilinkcheck.application.agent.dto.github.RepoInfo;
+import com.ilink.test.ilinkcheck.application.agent.dto.github.RepoTreeNode;
 import com.ilink.test.ilinkcheck.application.agent.dto.github.TrendingRepo;
 import com.ilink.test.ilinkcheck.application.agent.spi.mcp.GitHubRepoProvider;
 import org.slf4j.Logger;
@@ -242,6 +243,40 @@ public class GitHubApiClient implements GitHubRepoProvider {
         }
     }
 
+    @Override
+    public List<RepoTreeNode> fetchDirectoryTree(String owner, String repo, String path) {
+        if (!StringUtils.hasText(owner) || !StringUtils.hasText(repo)) {
+            throw new GitHubClientException(GitHubClientException.Type.INVALID_PARAMETER,
+                    "owner and repo must not be blank");
+        }
+        try {
+            String contentPath = StringUtils.hasText(path) ? path.trim() : "";
+            contentPath = contentPath.startsWith("/") ? contentPath.substring(1) : contentPath;
+
+            ApiContentResponse[] items = restClient.get()
+                    .uri("/repos/{owner}/{repo}/contents/{path}",
+                            owner, repo, contentPath)
+                    .retrieve()
+                    .body(ApiContentResponse[].class);
+
+            if (items == null) {
+                return Collections.emptyList();
+            }
+
+            return java.util.Arrays.stream(items)
+                    .map(item -> new RepoTreeNode(
+                            item.name(),
+                            item.path(),
+                            item.type(),
+                            item.size(),
+                            item.sha()
+                    ))
+                    .toList();
+        } catch (RestClientResponseException e) {
+            throw translateException("fetchDirectoryTree", e);
+        }
+    }
+
     private String fetchReadmeSummary(String owner, String repo) {
         try {
             ApiReadmeResponse readmeResp = restClient.get()
@@ -454,6 +489,15 @@ public class GitHubApiClient implements GitHubRepoProvider {
     private record ApiSearchResponse(
             @JsonProperty("total_count") int totalCount,
             List<ApiSearchItem> items
+    ) {}
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    private record ApiContentResponse(
+            String name,
+            String path,
+            String type,
+            long size,
+            String sha
     ) {}
 
     @JsonIgnoreProperties(ignoreUnknown = true)
