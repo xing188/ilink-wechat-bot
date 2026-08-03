@@ -37,6 +37,7 @@ import com.ilink.test.ilinkcheck.infrastructure.scheduler.digest.TechDigestSched
 import com.ilink.test.ilinkcheck.application.tool.categories.translation.TranslationService;
 import com.ilink.test.ilinkcheck.infrastructure.document.DocumentExportService;
 import org.junit.jupiter.api.Test;
+import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.scheduling.TaskScheduler;
 
@@ -46,6 +47,7 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 /**
  * Agent 大循环最小可运行测试。
@@ -262,7 +264,8 @@ class AgentLoopServiceTest {
                         5200,
                         860,
                         "README 主要介绍了模型接入、向量库、RAG 和工具调用的集成方式。",
-                        "Java / Spring Boot / Spring AI"
+                        "Java / Spring Boot / Spring AI",
+                        "Spring AI 是 Spring 生态下的 AI 应用开发框架，提供模型接入、向量库、RAG 和工具调用等能力。"
                 );
             }
 
@@ -319,7 +322,7 @@ class AgentLoopServiceTest {
 
         List<PhaseExecutor> executors = List.of(
                 new GitHubFetchPhaseExecutor(gitHubRepoProvider),
-                new GitHubSummarizePhaseExecutor(),
+                new GitHubSummarizePhaseExecutor(mockChatClient()),
                 new RoadmapFetchPhaseExecutor(devToArticleProvider, webSearchProvider),
                 new RoadmapComposePhaseExecutor(composeService),
                 new ReviewConfirmPhaseExecutor(),
@@ -336,5 +339,16 @@ class AgentLoopServiceTest {
                 new PhaseExecutorRegistry(executors),
                 new InMemoryAgentStateStore()
         );
+    }
+
+    private static ChatClient mockChatClient() {
+        ChatClient chatClient = mock(ChatClient.class);
+        ChatClient.ChatClientRequestSpec requestSpec = mock(ChatClient.ChatClientRequestSpec.class);
+        ChatClient.CallResponseSpec responseSpec = mock(ChatClient.CallResponseSpec.class);
+        when(chatClient.prompt()).thenReturn(requestSpec);
+        when(requestSpec.user(org.mockito.ArgumentMatchers.anyString())).thenReturn(requestSpec);
+        when(requestSpec.call()).thenReturn(responseSpec);
+        when(responseSpec.content()).thenReturn("LLM 摘要测试内容");
+        return chatClient;
     }
 }

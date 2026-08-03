@@ -101,7 +101,8 @@ class DailyDigestToolTest {
                         5200,
                         860,
                         "Spring AI 是一个用于构建 AI 应用的开源项目。",
-                        "Java / Spring Boot / Spring AI"
+                        "Java / Spring Boot / Spring AI",
+                        ""
                 );
             }
 

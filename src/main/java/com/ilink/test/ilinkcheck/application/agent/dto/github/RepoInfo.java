@@ -8,5 +8,6 @@ public record RepoInfo(
         int stars,
         int forks,
         String readmeSummary,
-        String techStack
+        String techStack,
+        String readmeRaw
 ) {}

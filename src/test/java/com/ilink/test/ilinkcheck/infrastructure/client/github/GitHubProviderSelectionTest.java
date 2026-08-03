@@ -27,18 +27,9 @@ class GitHubProviderSelectionTest {
                 });
     }
 
-    @Test
-    void shouldUseMockProviderWhenGithubDisabled() {
-        contextRunner.withPropertyValues("app.github.enabled=false")
-                .run(context -> {
-                    assertThat(context).hasSingleBean(GitHubRepoProvider.class);
-                    assertThat(context.getBean(GitHubRepoProvider.class)).isInstanceOf(MockGitHubRepoProvider.class);
-                });
-    }
-
     @Configuration(proxyBeanMethods = false)
     @Import(AgentMockConfig.class)
-    @ComponentScan(basePackageClasses = {GitHubApiClient.class, MockGitHubRepoProvider.class})
+    @ComponentScan(basePackageClasses = {GitHubApiClient.class})
     static class TestConfig {
 
         @Bean

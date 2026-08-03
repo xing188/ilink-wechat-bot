@@ -28,7 +28,8 @@ public class MockGitHubRepoProvider implements GitHubRepoProvider {
                     Lodash makes JavaScript easier by taking the hassle out of working with arrays, numbers, objects, strings, etc.
                     \n## Architecture\nLodash 采用模块化设计，每个函数独立放在 modules/ 目录下，通过组合函数实现复杂功能。核心模块包括：Array、Collection、Function、Lang、Math、Number、Object、Seq、String、Util。
                     \n## Usage\n`_.chunk(array, size)` — 将数组拆分成多个 size 长度的块\n`_.debounce(func, wait)` — 防抖函数\n`_.deepClone(value)` — 深拷贝""",
-                    "JavaScript, Node.js"
+                    "JavaScript, Node.js",
+                    "Lodash 是一个现代化的 JavaScript 工具库，提供模块化、高性能的数组、对象、字符串等实用函数。采用模块化设计，核心模块包括 Array、Collection、Function、Lang 等，通过组合函数实现复杂功能。"
             );
         }
         if ("vuejs".equals(owner) && "core".equals(repo)) {
@@ -40,7 +41,8 @@ public class MockGitHubRepoProvider implements GitHubRepoProvider {
                     Vue.js 是一个用于构建用户界面的渐进式框架。
                     \n## Architecture\nVue 3 采用 Monorepo 管理，核心包包括：\n- `reactivity` — 独立于框架的响应式系统\n- `runtime-core` — 运行时核心（虚拟 DOM、组件、生命周期）\n- `compiler-core` — 编译器核心（模板编译优化）\n- `vue` — 完整构建入口
                     \n## Data Flow\n组件树 → 响应式状态 → 虚拟 DOM Diff → 高效 DOM 更新""",
-                    "TypeScript, Monorepo, Vite"
+                    "TypeScript, Monorepo, Vite",
+                    "Vue.js 是一个渐进式 JavaScript 框架，用于构建用户界面。Vue 3 采用 Monorepo 管理，核心包包括 reactivity（响应式系统）、runtime-core（运行时核心）、compiler-core（编译器核心）。数据流采用组件树 → 响应式状态 → 虚拟 DOM Diff → DOM 更新的模式。"
             );
         }
         // 通用 mock
@@ -50,7 +52,8 @@ public class MockGitHubRepoProvider implements GitHubRepoProvider {
                 "TypeScript", 1000 + (owner.hashCode() % 5000),
                 100 + (repo.hashCode() % 1000),
                 "该项目致力于提供高效、可靠的解决方案。采用模块化架构设计，核心模块职责清晰，通过插件化机制支持功能扩展。\\n\\n## Architecture\\n整体架构分为三层：核心层（提供基础能力）、扩展层（插件机制）、应用层（用户接口）。数据流采用事件驱动模式，各模块之间通过消息队列解耦。",
-                "TypeScript, React, Node.js"
+                "TypeScript, React, Node.js",
+                "该项目致力于提供高效、可靠的解决方案，采用模块化架构设计，核心模块职责清晰，通过插件化机制支持功能扩展。整体架构分为核心层、扩展层和应用层，数据流采用事件驱动模式。"
         );
     }
 
