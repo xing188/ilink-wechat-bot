@@ -47,6 +47,12 @@ public class ReminderTaskDO {
     @Column(name = "cron_expression", length = 100)
     private String cronExpression;
 
+    @Column(name = "interval_value")
+    private Integer intervalValue;
+
+    @Column(name = "interval_unit", length = 16)
+    private String intervalUnit;
+
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 

@@ -57,12 +57,12 @@
 
 ## 📋 三、 详细功能模块与技术点映射
 
-| 功能模块 | 详细功能说明 | 依赖技术点 / 架构 | 选用方案 |
-| --- | --- | --- | --- |
-| **1. GitHub 热点与开源速读** | 自动推送 GitHub Trending，支持发送 GitHub 链接快速提炼项目架构与启动方式。 | GitHub API (GraphQL), LLM 摘要总结 | **`GitHub-MCP`** + **`GithubRepoDigestSkill`** |
-| **2. 技术路线与博文推荐** | 输入想学的技术，自动抓取 Dev.to / GitHub 上的优质内容，输出体系化学习路线。 | Dev.to API, 逻辑链 (CoT) Prompt | **`DevTo-MCP`** + **`TechRoadmapSkill`** |
-| **3. 博客写作辅助与 RAG 审稿** | 搜集参考文献，并依据中文技术文档规范（如中英文空格、代码块标注）对草稿进行 Code Review 式审稿。 | RAG (ChromaDB/Milvus), 向量检索, Prompt Engine | **`DocReviewRAGSkill`** (结合 RAG 向量库) |
-| **4. 每日/每周技术晨报推送** | 每天定时推送 GitHub 热门项目与 Dev.to 趋势，支持 Cron 定时任务。 | 定时任务 (Cron), 微信模板卡片渲染 | **`DailyDigestPushSkill`** + 微信网关 |
+| 功能模块 | 详细功能说明                                                       | 依赖技术点 / 架构 | 选用方案 |
+| --- |--------------------------------------------------------------| --- | --- |
+| **1. GitHub 热点与开源速读** | 自动推送 GitHub Trending，支持发送 GitHub 链接快速提炼项目架构与启动方式。            | GitHub API (GraphQL), LLM 摘要总结 | **`GitHub-MCP`** + **`GithubRepoDigestSkill`** |
+| **2. 技术路线与博文推荐** | 输入想学的技术，自动抓取 Dev.to / GitHub 上的优质内容，输出体系化学习路线。               | Dev.to API, 逻辑链 (CoT) Prompt | **`DevTo-MCP`** + **`TechRoadmapSkill`** |
+| **3. 博客写作辅助与 RAG 审稿** | 搜集参考文献，并依据中文技术文档规范（如中英文空格、代码块标注）对草稿进行 Code Review 式审稿。       | RAG (ChromaDB/Milvus), 向量检索, Prompt Engine | **`DocReviewRAGSkill`** (结合 RAG 向量库) |
+| **4. 每日/每周技术晨报推送** | 每日推送技术新闻与 Dev.to 趋势，每周定时推送 GitHub 热门项目（和一周总结？），支持 Cron 定时任务。 | 定时任务 (Cron), 微信模板卡片渲染 | **`DailyDigestPushSkill`** + 微信网关 |
 
 ---
 

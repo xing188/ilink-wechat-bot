@@ -13,8 +13,6 @@ import org.springframework.util.StringUtils;
 @Slf4j
 public class ReplyStrategyService {
 
-    private static final int LONG_TEXT_THRESHOLD = 800;
-
     private final DocumentExportService documentExportService;
     private final TextToSpeechService textToSpeechService;
     private final VoicePreferenceService voicePreferenceService;
@@ -33,20 +31,6 @@ public class ReplyStrategyService {
         }
 
         String normalized = replyText.trim();
-        // FORCE_TEXT 模式下始终以纯文本发送，不转 Word（适用于路线/报告等结构化输出）
-        boolean allowDocxFallback = (replyMode != ReplyMode.FORCE_TEXT);
-        if (allowDocxFallback && normalized.length() > LONG_TEXT_THRESHOLD) {
-            log.info("Reply length={} exceeds threshold={}, preparing docx draft.",
-                    normalized.length(), LONG_TEXT_THRESHOLD);
-
-            byte[] docxBytes = documentExportService.exportToDocx("AI详细回复", normalized);
-            return ReplyDraft.file(
-                    docxBytes,
-                    "AI详细回复.docx",
-                    "回复内容较长，已为你整理成 Word 文档，请查收。",
-                    "回复内容较长，已为你整理成 Word 文档，请查收。");
-        }
-
         if (replyMode == ReplyMode.AUDIO_FILE) {
             try {
                 VoiceOption voiceOption = voicePreferenceService.getUserVoiceOption(userId);
@@ -58,6 +42,8 @@ public class ReplyStrategyService {
             }
         }
 
+        // 微信对话里默认直接返回文本，不再因为长度自动转成 Word 文档，
+        // 避免打断连续对话。显式导出文件应由独立工具单独触发。
         return ReplyDraft.text(normalized);
     }
 }

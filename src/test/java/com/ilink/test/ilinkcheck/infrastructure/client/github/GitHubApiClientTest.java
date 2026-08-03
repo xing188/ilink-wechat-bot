@@ -4,6 +4,7 @@ import com.ilink.test.ilinkcheck.application.agent.dto.github.RepoInfo;
 import com.ilink.test.ilinkcheck.application.agent.dto.github.TrendingRepo;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
+import org.springframework.test.web.client.ExpectedCount;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
 
@@ -14,12 +15,13 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.startsWith;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
+import static org.springframework.test.web.client.response.MockRestResponseCreators.withServerError;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
 class GitHubApiClientTest {
 
     @Test
-    void shouldDecodeReadmeSummaryWhenBase64ContainsLineBreaks() {
+    void shouldDecodeReadmeSummaryWhenBase64ContainsLineBreaksAndBadgeNoise() {
         RestClient.Builder builder = RestClient.builder();
         MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
         GitHubApiClient client = new GitHubApiClient(builder, "https://api.github.com", "", "", false);
@@ -38,6 +40,9 @@ class GitHubApiClientTest {
                         """, MediaType.APPLICATION_JSON));
 
         String readme = """
+                [![Build status](https://img.shields.io/github/actions/workflow/status/openai/codex/ci.yml)](https://github.com/openai/codex/actions)
+                [![License](https://img.shields.io/badge/license-MIT-green)](https://github.com/openai/codex/blob/main/LICENSE)
+
                 # Codex
 
                 Codex helps developers ship code faster.
@@ -58,6 +63,8 @@ class GitHubApiClientTest {
         RepoInfo repoInfo = client.fetchRepo("openai", "codex");
 
         assertThat(repoInfo.readmeSummary()).contains("Codex helps developers ship code faster.");
+        assertThat(repoInfo.readmeSummary()).doesNotContain("[![");
+        assertThat(repoInfo.readmeSummary()).doesNotContain("img.shields.io");
         assertThat(repoInfo.techStack()).contains("Java").contains("agent");
         server.verify();
     }
@@ -88,12 +95,12 @@ class GitHubApiClientTest {
                         ]
                         """, MediaType.APPLICATION_JSON));
 
-        List<TrendingRepo> repos = client.fetchTrending("java", "daily");
+        List<TrendingRepo> repos = client.fetchTrending("java", "weekly");
 
         assertThat(repos).hasSize(1);
         assertThat(repos.getFirst().owner()).isEqualTo("spring-projects");
         assertThat(repos.getFirst().starMetricValue()).isEqualTo(321);
-        assertThat(repos.getFirst().metricType()).isEqualTo(TrendingRepo.MetricType.DAILY_STARS);
+        assertThat(repos.getFirst().metricType()).isEqualTo(TrendingRepo.MetricType.WEEKLY_STARS);
         assertThat(repos.getFirst().source()).isEqualTo(TrendingRepo.Source.COMMUNITY_TRENDING_API);
         server.verify();
     }
@@ -129,6 +136,46 @@ class GitHubApiClientTest {
         assertThat(repos.getFirst().starMetricValue()).isEqualTo(999);
         assertThat(repos.getFirst().metricType()).isEqualTo(TrendingRepo.MetricType.TOTAL_STARS);
         assertThat(repos.getFirst().source()).isEqualTo(TrendingRepo.Source.GITHUB_SEARCH_API);
+        server.verify();
+    }
+
+    @Test
+    void shouldCooldownCommunityApiAfterFailureAndUseOfficialSearchDirectly() {
+        RestClient.Builder builder = RestClient.builder();
+        MockRestServiceServer server = MockRestServiceServer.bindTo(builder).ignoreExpectOrder(true).build();
+        GitHubApiClient client = new GitHubApiClient(
+                builder,
+                "https://api.github.com",
+                "",
+                "https://github-trending-api.vercel.app"
+        );
+
+        server.expect(ExpectedCount.once(), requestTo(startsWith("https://github-trending-api.vercel.app/repositories")))
+                .andRespond(withServerError());
+        server.expect(ExpectedCount.twice(), requestTo(startsWith("https://api.github.com/search/repositories")))
+                .andRespond(withSuccess("""
+                        {
+                          "total_count": 1,
+                          "items": [
+                            {
+                              "name": "spring-ai",
+                              "owner": {"login": "spring-projects"},
+                              "description": "Spring AI project",
+                              "language": "Java",
+                              "stargazers_count": 999,
+                              "html_url": "https://github.com/spring-projects/spring-ai"
+                            }
+                          ]
+                        }
+                        """, MediaType.APPLICATION_JSON));
+
+        List<TrendingRepo> first = client.fetchTrending("java", "daily");
+        List<TrendingRepo> second = client.fetchTrending("java", "daily");
+
+        assertThat(first).hasSize(1);
+        assertThat(second).hasSize(1);
+        assertThat(first.getFirst().source()).isEqualTo(TrendingRepo.Source.GITHUB_SEARCH_API);
+        assertThat(second.getFirst().source()).isEqualTo(TrendingRepo.Source.GITHUB_SEARCH_API);
         server.verify();
     }
 }

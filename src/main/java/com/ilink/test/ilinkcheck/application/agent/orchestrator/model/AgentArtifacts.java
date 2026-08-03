@@ -10,6 +10,10 @@ public final class AgentArtifacts {
     public static final String REQUEST_TOPIC = "requestTopic";
     public static final String REQUEST_DRAFT = "requestDraft";
     public static final String REQUEST_SCHEDULE_TIME = "requestScheduleTime";
+    public static final String REQUEST_SCHEDULE_HOUR = "requestScheduleHour";
+    public static final String REQUEST_SCHEDULE_MINUTE = "requestScheduleMinute";
+    public static final String REQUEST_SCHEDULE_PENDING_TEXT = "requestSchedulePendingText";
+    public static final String REQUEST_SCHEDULE_MATCHED_TEXT = "requestScheduleMatchedText";
 
     public static final String REPO_INFO = "repoInfo";
     public static final String TRENDING_REPOS = "trendingRepos";

@@ -86,7 +86,7 @@
 
 ---
 
-## 人6：总装 + Daily Digest（共享入口 owner）
+## 人6：通用定时 + GitHub 周报（共享入口 owner）
 
 | 项 | 内容 |
 |---|---|
@@ -95,14 +95,15 @@
 | 调度包 | `infrastructure.scheduler.digest` |
 | DTO 包 | `application.agent.dto.digest`（共用） |
 | 需实现的 Skill | `DailyDigestSkill` (`application.skill`) |
-| 需创建的类 | `DailyDigestComposeService`（聚合逻辑） |
-| | `DailyDigestPhaseExecutor`（工作流阶段） |
+| 需创建的类 | `DailyDigestComposeService`（GitHub 周报聚合 + README 摘要） |
+| | `DigestCollectSchedulePhaseExecutor`（收集推送时间） |
+| | `DigestComposePhaseExecutor`（订阅并生成预览） |
 | | `DailyDigestTool`（`@Tool` 暴露给 AI） |
-| | `TechDigestScheduler`（Cron 定时触发） |
-| 接口依赖 | 人1的 `GitHubRepoProvider`、人2的 `DevToArticleProvider` |
+| | `TechDigestScheduler`（通用定时触发） |
+| 接口依赖 | 人1的 `GitHubRepoProvider`（必需）、人2的 `DevToArticleProvider`（后续扩展） |
 | 统一维护 | `ConversationAiService`、`IntentRouter`、`AgentTaskType`、`AgentPhase`、`WorkflowTemplateRegistry` |
 | | `pom.xml`、`application*.yml` |
-| 交付 | 7/29 冻结 → 7/31 路由可用 → 8/5 全链路 → 8/8 联调 |
+| 交付 | 8/2 已完成：通用定时解析、周/日/月/间隔订阅、GitHub 周报最小版 |
 
 ---
 
@@ -115,7 +116,7 @@
 | `GithubRepoDigestSkill` | `github-repo-digest` | 人3  | 人1的 `GitHubRepoProvider`                              |
 | `TechRoadmapSkill`      | `tech-roadmap`       | 人4  | 人2的 `DevToArticleProvider` + `WebSearchProvider`      |
 | `DocReviewSkill`        | `doc-review`         | 人5  | 自己的 `StyleGuideRetriever` + RAG                       |
-| `DailyDigestSkill`      | `daily-digest`       | 人6  | 人1的 `GitHubRepoProvider` + 人2的 `DevToArticleProvider` |
+| `DailyDigestSkill`      | `daily-digest`       | 人6  | 人1的 `GitHubRepoProvider`（周报）+ 人2的 `DevToArticleProvider`（预留） |
 
 ### Skill 调用链
 

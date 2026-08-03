@@ -1,6 +1,7 @@
 package com.ilink.test.ilinkcheck.application.reminder.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.ilink.test.ilinkcheck.application.schedule.model.ScheduleIntervalUnit;
 
 import java.time.Instant;
 @JsonIgnoreProperties(ignoreUnknown = true)
@@ -16,6 +17,8 @@ public record ReminderRecord(
         String timezone,               // 时区
         Instant nextFireAt,            // 下一次触发时间
         String cronExpression,         // CRON 表达式（仅 recurrence=CRON 时使用）
+        Integer intervalValue,         // 间隔型规则的步长，例如“每2周”里的 2
+        ScheduleIntervalUnit intervalUnit, // 间隔型规则的单位，例如 WEEK / MONTH
         Instant createdAt,
         Instant updatedAt,
         Instant completedAt,           // 全部完成时间，循环提醒一般为空

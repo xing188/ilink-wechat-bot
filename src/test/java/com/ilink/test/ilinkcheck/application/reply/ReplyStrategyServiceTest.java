@@ -10,6 +10,7 @@ import org.junit.jupiter.api.Test;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 class ReplyStrategyServiceTest {
@@ -34,26 +35,24 @@ class ReplyStrategyServiceTest {
     }
 
     @Test
-    void shouldBuildDocxDraftForLongReply() {
+    void shouldKeepLongReplyAsPlainText() {
         DashScopeTextToSpeechServiceImpl ttsService = mock(DashScopeTextToSpeechServiceImpl.class);
         DocumentExportService documentExportService = mock(DocumentExportService.class);
         VoicePreferenceService voicePreferenceService = mock(VoicePreferenceService.class);
         String longReply = "a".repeat(801);
-        when(documentExportService.exportToDocx("AI详细回复", longReply)).thenReturn(new byte[]{9, 8, 7});
 
         ReplyStrategyService service = new ReplyStrategyService(ttsService, documentExportService, voicePreferenceService);
 
         ReplyDraft draft = service.build("u1", longReply, ReplyMode.TEXT);
 
-        assertThat(draft.type()).isEqualTo(ReplyDraft.Type.FILE);
-        assertThat(draft.fileName()).isEqualTo("AI详细回复.docx");
-        assertThat(draft.fileBytes()).containsExactly(9, 8, 7);
-        verify(documentExportService).exportToDocx("AI详细回复", longReply);
+        assertThat(draft.type()).isEqualTo(ReplyDraft.Type.TEXT);
+        assertThat(draft.text()).isEqualTo(longReply);
+        verifyNoInteractions(documentExportService);
     }
 
     @Test
     void forceTextModeSkipsDocxConversionEvenForLongReply() {
-        // FORCE_TEXT 模式下，即使超过 800 字符阈值也不转 Word，直接返回纯文本
+        // FORCE_TEXT 模式下同样直接返回纯文本
         DashScopeTextToSpeechServiceImpl ttsService = mock(DashScopeTextToSpeechServiceImpl.class);
         DocumentExportService documentExportService = mock(DocumentExportService.class);
         VoicePreferenceService voicePreferenceService = mock(VoicePreferenceService.class);
@@ -71,7 +70,6 @@ class ReplyStrategyServiceTest {
         assertThat(draft.type()).isEqualTo(ReplyDraft.Type.TEXT);
         assertThat(draft.text()).contains("学习路线");
         assertThat(draft.text()).contains("（来源：Dev.to）");
-        // 不应调用 docx 导出
-        org.mockito.Mockito.verifyNoInteractions(documentExportService);
+        verifyNoInteractions(documentExportService);
     }
 }

@@ -15,6 +15,9 @@ import com.ilink.test.ilinkcheck.application.agent.orchestrator.phase.review.Rev
 import com.ilink.test.ilinkcheck.application.agent.orchestrator.phase.review.ReviewFixGeneratePhaseExecutor;
 import com.ilink.test.ilinkcheck.application.agent.feature.review.DocReviewPhaseExecutor;
 import com.ilink.test.ilinkcheck.application.agent.feature.review.DraftReviewService;
+import com.ilink.test.ilinkcheck.application.agent.feature.digest.DailyDigestComposeService;
+import com.ilink.test.ilinkcheck.application.agent.feature.digest.DailyDigestSubscriptionService;
+import com.ilink.test.ilinkcheck.application.agent.feature.digest.DigestSubscriptionRepository;
 import com.ilink.test.ilinkcheck.application.agent.feature.roadmap.RoadmapComposeService;
 import com.ilink.test.ilinkcheck.application.agent.orchestrator.phase.roadmap.RoadmapComposePhaseExecutor;
 import com.ilink.test.ilinkcheck.application.agent.orchestrator.phase.roadmap.RoadmapFetchPhaseExecutor;
@@ -27,13 +30,22 @@ import com.ilink.test.ilinkcheck.application.agent.spi.mcp.DevToArticleProvider;
 import com.ilink.test.ilinkcheck.application.agent.spi.mcp.GitHubRepoProvider;
 import com.ilink.test.ilinkcheck.application.agent.spi.mcp.WebSearchProvider;
 import com.ilink.test.ilinkcheck.application.agent.spi.rag.StyleGuideRetriever;
+import com.ilink.test.ilinkcheck.adapter.inbound.wechat.WechatBotRuntime;
+import com.ilink.test.ilinkcheck.adapter.outbound.wechat.WechatMessageGateway;
 import com.ilink.test.ilinkcheck.config.AgentMockConfig;
+import com.ilink.test.ilinkcheck.infrastructure.persistence.digest.InMemoryDigestSubscriptionRepository;
+import com.ilink.test.ilinkcheck.infrastructure.scheduler.digest.TechDigestScheduler;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.scheduling.TaskScheduler;
 
 import java.io.PrintStream;
 import java.nio.charset.StandardCharsets;
+import java.time.Clock;
 import java.util.List;
 import java.util.Optional;
+
+import static org.mockito.Mockito.mock;
 
 /**
  * 人4 调试用冒烟测试：直接装配 AgentLoopService（不走 Spring / 不调网络），
@@ -90,6 +102,32 @@ class RoadmapChainDebugTest {
                 new com.ilink.test.ilinkcheck.infrastructure.document.DocumentExportService()
         );
 
+        DailyDigestComposeService digestComposeService = new DailyDigestComposeService(
+                gitHubRepoProvider,
+                devToArticleProvider,
+                "java",
+                "daily",
+                3,
+                "ai",
+                3
+        );
+        DigestSubscriptionRepository digestSubscriptionRepository = new InMemoryDigestSubscriptionRepository();
+        @SuppressWarnings("unchecked")
+        ObjectProvider<WechatBotRuntime> runtimeProvider = mock(ObjectProvider.class);
+        TechDigestScheduler techDigestScheduler = new TechDigestScheduler(
+                digestSubscriptionRepository,
+                runtimeProvider,
+                new WechatMessageGateway(),
+                mock(TaskScheduler.class),
+                digestComposeService
+        );
+        DailyDigestSubscriptionService dailyDigestSubscriptionService = new DailyDigestSubscriptionService(
+                digestSubscriptionRepository,
+                techDigestScheduler,
+                Clock.systemDefaultZone(),
+                "Asia/Shanghai"
+        );
+
         List<PhaseExecutor> executors = List.of(
                 new GitHubFetchPhaseExecutor(gitHubRepoProvider),
                 new GitHubSummarizePhaseExecutor(),
@@ -99,7 +137,7 @@ class RoadmapChainDebugTest {
                 new DocReviewPhaseExecutor(draftReviewService),
                 new ReviewFixGeneratePhaseExecutor(draftReviewService),
                 new DigestCollectSchedulePhaseExecutor(),
-                new DigestComposePhaseExecutor(gitHubRepoProvider, devToArticleProvider)
+                new DigestComposePhaseExecutor(digestComposeService, dailyDigestSubscriptionService)
         );
 
         return new AgentLoopService(
