@@ -1,7 +1,9 @@
 package com.ilink.test.ilinkcheck.application.agent.orchestrator;
 
 import com.ilink.test.ilinkcheck.application.agent.dto.github.RepoInfo;
+import com.ilink.test.ilinkcheck.application.agent.dto.github.RepoTreeNode;
 import com.ilink.test.ilinkcheck.application.agent.dto.github.TrendingRepo;
+import com.ilink.test.ilinkcheck.application.agent.feature.github.GitHubRepoDigestService;
 import com.ilink.test.ilinkcheck.application.agent.dto.review.ReviewSuggestion;
 import com.ilink.test.ilinkcheck.application.agent.dto.roadmap.DevToArticle;
 import com.ilink.test.ilinkcheck.application.agent.dto.roadmap.SearchResult;
@@ -10,6 +12,9 @@ import com.ilink.test.ilinkcheck.application.agent.feature.review.DraftReviewSer
 import com.ilink.test.ilinkcheck.application.agent.orchestrator.model.PhaseExecutor;
 import com.ilink.test.ilinkcheck.application.agent.orchestrator.phase.digest.DigestCollectSchedulePhaseExecutor;
 import com.ilink.test.ilinkcheck.application.agent.orchestrator.phase.digest.DigestComposePhaseExecutor;
+import com.ilink.test.ilinkcheck.application.agent.orchestrator.phase.github.GitHubCodeExplainPhaseExecutor;
+import com.ilink.test.ilinkcheck.application.agent.orchestrator.phase.github.GitHubDirectoryAnalyzePhaseExecutor;
+import com.ilink.test.ilinkcheck.application.agent.orchestrator.phase.github.GitHubDirectoryExpandPhaseExecutor;
 import com.ilink.test.ilinkcheck.application.agent.orchestrator.phase.github.GitHubFetchPhaseExecutor;
 import com.ilink.test.ilinkcheck.application.agent.orchestrator.phase.github.GitHubSummarizePhaseExecutor;
 import com.ilink.test.ilinkcheck.application.agent.orchestrator.phase.review.ReviewCollectDraftPhaseExecutor;
@@ -67,6 +72,65 @@ class AgentLoopServiceTest {
         assertThat(reply.get()).contains("GitHub 仓库速读");
         assertThat(reply.get()).contains("spring-projects/spring-ai");
         assertThat(reply.get()).contains("README 提炼");
+        assertThat(reply.get()).contains("需要我继续分析它的核心目录架构吗");
+    }
+
+    @Test
+    void shouldAnalyzeDirectoryAfterConfirmation() {
+        AgentLoopService agentLoopService = createAgentLoopService();
+
+        agentLoopService.tryHandle("conv-15", "帮我速读一下 https://github.com/spring-projects/spring-ai");
+        Optional<String> reply = agentLoopService.tryHandle("conv-15", "好");
+
+        assertThat(reply).isPresent();
+        assertThat(reply.get()).contains("核心目录架构");
+        assertThat(reply.get()).contains("src/");
+        assertThat(reply.get()).contains("main/");
+        assertThat(reply.get()).contains("guide/");
+    }
+
+    @Test
+    void shouldSkipDirectoryWhenUserRejects() {
+        AgentLoopService agentLoopService = createAgentLoopService();
+
+        agentLoopService.tryHandle("conv-16", "帮我速读一下 https://github.com/spring-projects/spring-ai");
+        Optional<String> reply = agentLoopService.tryHandle("conv-16", "不用");
+
+        assertThat(reply).isPresent();
+        assertThat(reply.get()).contains("已跳过目录架构分析");
+        assertThat(reply.get()).doesNotContain("核心目录架构");
+    }
+
+    @Test
+    void shouldShowDirectoryTreeThenExplainCode() {
+        AgentLoopService agentLoopService = createAgentLoopService();
+
+        agentLoopService.tryHandle("conv-17", "帮我速读一下 https://github.com/spring-projects/spring-ai");
+        agentLoopService.tryHandle("conv-17", "好"); // 生成目录架构
+
+        // 回复目录名 → 展示完整子目录树并询问想看哪个目录的代码
+        Optional<String> tree = agentLoopService.tryHandle("conv-17", "main/");
+        assertThat(tree).isPresent();
+        assertThat(tree.get()).contains("`src/main/` 结构");
+        assertThat(tree.get()).contains("java/");
+        assertThat(tree.get()).contains("想了解哪个目录的代码内容");
+
+        // 回复具体目录名 → 给出该目录代码讲解
+        Optional<String> explain = agentLoopService.tryHandle("conv-17", "java/");
+        assertThat(explain).isPresent();
+        assertThat(explain.get()).contains("src/main/java");
+        assertThat(explain.get()).contains("App.java");
+    }
+
+    @Test
+    void shouldPassThroughUnrelatedMessageWhenGitHubFinished() {
+        AgentLoopService agentLoopService = createAgentLoopService();
+
+        agentLoopService.tryHandle("conv-18", "帮我速读一下 https://github.com/spring-projects/spring-ai");
+        agentLoopService.tryHandle("conv-18", "好"); // 目录分析完成后处于保留态
+        Optional<String> reply = agentLoopService.tryHandle("conv-18", "杭州今天天气怎么样");
+
+        assertThat(reply).isEmpty();
     }
 
     @Test
@@ -303,6 +367,37 @@ class AgentLoopServiceTest {
                         new TrendingRepo("langchain-ai", "langgraph", "面向多 Agent 工作流的图式编排框架。", "Python", 280, "https://github.com/langchain-ai/langgraph", TrendingRepo.MetricType.DAILY_STARS, TrendingRepo.Source.MOCK)
                 );
             }
+
+            @Override
+            public List<RepoTreeNode> fetchDirectoryTree(String owner, String repo, String path) {
+                if ("src".equals(path)) {
+                    return List.of(
+                            new RepoTreeNode("main", "src/main", "dir", 0, "mock"),
+                            new RepoTreeNode("test", "src/test", "dir", 0, "mock")
+                    );
+                }
+                if ("src/main".equals(path) || "main".equals(path)) {
+                    return List.of(
+                            new RepoTreeNode("java", "src/main/java", "dir", 0, "mock"),
+                            new RepoTreeNode("resources", "src/main/resources", "dir", 0, "mock")
+                    );
+                }
+                if ("src/main/java".equals(path)) {
+                    return List.of(
+                            new RepoTreeNode("com", "src/main/java/com", "dir", 0, "mock"),
+                            new RepoTreeNode("App.java", "src/main/java/App.java", "file", 2048, "mock")
+                    );
+                }
+                if ("docs".equals(path)) {
+                    return List.of(new RepoTreeNode("guide", "docs/guide", "dir", 0, "mock"));
+                }
+                return List.of(
+                        new RepoTreeNode("src", "src", "dir", 0, "mock-src"),
+                        new RepoTreeNode("docs", "docs", "dir", 0, "mock-docs"),
+                        new RepoTreeNode("tests", "tests", "dir", 0, "mock-tests"),
+                        new RepoTreeNode("README.md", "README.md", "file", 1024, "mock-readme")
+                );
+            }
         };
 
         DevToArticleProvider devToArticleProvider = (tag, limit) -> List.of(
@@ -321,6 +416,7 @@ class AgentLoopServiceTest {
         );
 
         DraftReviewService draftReviewService = new DraftReviewService(styleGuideRetriever, new DocumentExportService());
+        GitHubRepoDigestService gitHubRepoDigestService = new GitHubRepoDigestService(gitHubRepoProvider);
         DailyDigestComposeService digestComposeService = new DailyDigestComposeService(
                 gitHubRepoProvider,
                 devToArticleProvider,
@@ -350,6 +446,9 @@ class AgentLoopServiceTest {
         List<PhaseExecutor> executors = List.of(
                 new GitHubFetchPhaseExecutor(gitHubRepoProvider),
                 new GitHubSummarizePhaseExecutor(),
+                new GitHubDirectoryAnalyzePhaseExecutor(gitHubRepoDigestService),
+                new GitHubDirectoryExpandPhaseExecutor(gitHubRepoDigestService),
+                new GitHubCodeExplainPhaseExecutor(gitHubRepoDigestService),
                 new RoadmapFetchPhaseExecutor(devToArticleProvider, webSearchProvider),
                 new RoadmapComposePhaseExecutor(composeService),
                 new ReviewConfirmPhaseExecutor(),

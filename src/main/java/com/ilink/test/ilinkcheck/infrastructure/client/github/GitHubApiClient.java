@@ -277,6 +277,30 @@ public class GitHubApiClient implements GitHubRepoProvider {
         }
     }
 
+    @Override
+    public String fetchFileContent(String owner, String repo, String path) {
+        if (!StringUtils.hasText(owner) || !StringUtils.hasText(repo) || !StringUtils.hasText(path)) {
+            return null;
+        }
+        try {
+            String contentPath = path.trim();
+            contentPath = contentPath.startsWith("/") ? contentPath.substring(1) : contentPath;
+            ApiReadmeResponse fileResp = restClient.get()
+                    .uri("/repos/{owner}/{repo}/contents/{path}", owner, repo, contentPath)
+                    .retrieve()
+                    .body(ApiReadmeResponse.class);
+            if (fileResp == null || !StringUtils.hasText(fileResp.content())) {
+                return null;
+            }
+            byte[] decoded = Base64.getMimeDecoder().decode(fileResp.content());
+            return new String(decoded, StandardCharsets.UTF_8);
+        } catch (Exception e) {
+            log.warn("Failed to fetch file content: repo={}/{}, path={}, reason={}",
+                    owner, repo, path, e.getMessage());
+            return null;
+        }
+    }
+
     private String fetchReadmeSummary(String owner, String repo) {
         try {
             ApiReadmeResponse readmeResp = restClient.get()
