@@ -90,9 +90,17 @@ public class GitHubSummarizePhaseExecutor implements PhaseExecutor {
         // 将结构化 JSON 存入工件，供后续单独取用各字段
         Map<String, Object> result = new HashMap<>();
         result.put(AgentArtifacts.README_SUMMARY_JSON, sections);
+        result.put(AgentArtifacts.REQUEST_REPOSITORY, repoFullName);
+        result.put(AgentArtifacts.REPO_INFO, repoInfo);
 
-        log.info("conversationId={}, phase=GITHUB_SUMMARIZE, workflow finished", conversationId);
-        return PhaseExecutionResult.finish(reply, result);
+        // 速读摘要输出后暂停，询问用户是否需要继续分析核心目录架构
+        String askDirectory = reply + "\n\n👉 需要我继续分析它的核心目录架构吗？回复「好」查看，回复「不用」跳过。";
+        log.info("conversationId={}, phase=GITHUB_SUMMARIZE, ask for directory analysis", conversationId);
+        return PhaseExecutionResult.waitForUser(
+                AgentPhase.GITHUB_DIRECTORY_ANALYZE,
+                askDirectory,
+                result
+        );
     }
 
     /**

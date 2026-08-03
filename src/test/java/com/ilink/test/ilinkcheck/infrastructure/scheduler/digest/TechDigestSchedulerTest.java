@@ -5,6 +5,7 @@ import com.ilink.test.ilinkcheck.adapter.inbound.wechat.WechatBotRuntime;
 import com.ilink.test.ilinkcheck.adapter.outbound.wechat.WechatMessageGateway;
 import com.ilink.test.ilinkcheck.application.agent.dto.digest.DigestSubscription;
 import com.ilink.test.ilinkcheck.application.agent.dto.github.RepoInfo;
+import com.ilink.test.ilinkcheck.application.agent.dto.github.RepoTreeNode;
 import com.ilink.test.ilinkcheck.application.agent.dto.github.TrendingRepo;
 import com.ilink.test.ilinkcheck.application.agent.dto.roadmap.DevToArticle;
 import com.ilink.test.ilinkcheck.application.agent.feature.digest.DailyDigestComposeService;
@@ -125,6 +126,11 @@ class TechDigestSchedulerTest {
                                 "https://github.com/spring-projects/spring-ai",
                                 TrendingRepo.MetricType.DAILY_STARS, TrendingRepo.Source.MOCK)
                 );
+            }
+
+            @Override
+            public List<RepoTreeNode> fetchDirectoryTree(String owner, String repo, String path) {
+                return List.of();
             }
         };
         DevToArticleProvider devToArticleProvider = (tag, limit) -> List.of(

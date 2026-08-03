@@ -1,6 +1,7 @@
 package com.ilink.test.ilinkcheck.infrastructure.client.github;
 
 import com.ilink.test.ilinkcheck.application.agent.dto.github.RepoInfo;
+import com.ilink.test.ilinkcheck.application.agent.dto.github.RepoTreeNode;
 import com.ilink.test.ilinkcheck.application.agent.dto.github.TrendingRepo;
 import com.ilink.test.ilinkcheck.application.agent.spi.mcp.GitHubRepoProvider;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -66,5 +67,35 @@ public class MockGitHubRepoProvider implements GitHubRepoProvider {
                 new TrendingRepo("tailwindlabs", "tailwindcss", "A utility-first CSS framework for rapid UI development.", "JavaScript", 120, "https://github.com/tailwindlabs/tailwindcss", TrendingRepo.MetricType.DAILY_STARS, TrendingRepo.Source.MOCK),
                 new TrendingRepo("rust-lang", "rust", "Empowering everyone to build reliable and efficient software.", "Rust", 100, "https://github.com/rust-lang/rust", TrendingRepo.MetricType.DAILY_STARS, TrendingRepo.Source.MOCK)
         );
+    }
+
+    @Override
+    public List<RepoTreeNode> fetchDirectoryTree(String owner, String repo, String path) {
+        // 根目录 mock：返回常见的开源项目目录结构
+        if (path == null || path.isBlank()) {
+            return List.of(
+                    new RepoTreeNode("src", "src", "dir", 0, "mock-src"),
+                    new RepoTreeNode("docs", "docs", "dir", 0, "mock-docs"),
+                    new RepoTreeNode("tests", "tests", "dir", 0, "mock-tests"),
+                    new RepoTreeNode("README.md", "README.md", "file", 1024, "mock-readme"),
+                    new RepoTreeNode("pom.xml", "pom.xml", "file", 4096, "mock-pom"),
+                    new RepoTreeNode("build.gradle", "build.gradle", "file", 2048, "mock-gradle")
+            );
+        }
+        // 子目录 mock
+        if ("src".equalsIgnoreCase(path)) {
+            return List.of(
+                    new RepoTreeNode("main", "src/main", "dir", 0, "mock-src-main"),
+                    new RepoTreeNode("main/java", "src/main/java", "dir", 0, "mock-src-main-java")
+            );
+        }
+        if ("src/main/java".equalsIgnoreCase(path)) {
+            return List.of(
+                    new RepoTreeNode(owner + ".app", owner + ".app", "dir", 0, "mock-app"),
+                    new RepoTreeNode(owner + ".core", owner + ".core", "dir", 0, "mock-core"),
+                    new RepoTreeNode(owner + ".infra", owner + ".infra", "dir", 0, "mock-infra")
+            );
+        }
+        return List.of();
     }
 }

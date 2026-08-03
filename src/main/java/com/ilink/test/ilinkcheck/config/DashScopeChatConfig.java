@@ -73,9 +73,14 @@ public class DashScopeChatConfig {
         return ChatClient.builder(dashScopeCompatibleChatModel);
     }
 
+    /**
+     * 语义路由专用 ChatClient（意图路由 / 工具选择）。
+     * 路由输出是"短分类结果"，用快模型可把响应压到 1~2s，
+     * 避免占用主对话模型导致每条消息等待数秒。
+     */
     @Bean
-    public ChatClient routingChatClient(ChatClient.Builder chatClientBuilder) {
-        return chatClientBuilder.clone().build();
+    public ChatClient routingChatClient(OpenAiChatModel fastChatModel) {
+        return ChatClient.builder(fastChatModel).build();
     }
 
     /**

@@ -17,7 +17,7 @@ app:
     # 学习路线规划 / 资料翻译专用的「快模型」。
     # 这两类任务输出短、结构固定，用小模型可把耗时从 15~30s 压到 3~5s。
     # 若账号未开通 qwen-flash，改成 qwen-turbo 或 qwen3.7-plus 即可（功能不受影响，只是慢）。
-    fast-model: "qwen-flash"
+    fast-model: "qwen-mt-flash"
     fast-max-tokens: 1500
     fast-temperature: 0.2
     # 抓取阶段（Dev.to / WebSearch）单个来源的最长等待时间，超时按空结果处理，不拖累整体回复。
@@ -30,3 +30,9 @@ app:
     voice: "longanyang"
     sample-rate: 24000
     speed: 1.0
+    # 单次语音合成最长等待时间，超时自动降级为文本回复。
+    timeout-ms: 30000
+
+  image:
+    # 图片生成全流程（提交+轮询+下载）最长等待时间，超时抛出异常。
+    timeout-ms: 90000

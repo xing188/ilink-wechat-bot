@@ -71,10 +71,35 @@ public class AgentLoopService {
 
         Optional<AgentState> existingState = agentStateStore.findActive(normalizedConversationId);
         if (existingState.isPresent()) {
-            return Optional.of(resumeWorkflow(existingState.get(), normalizedConversationId, normalizedUserMessage));
+            AgentState state = existingState.get();
+            // 已完成的工作流（技术路线 / GitHub 速读保留态）只响应明确的后续指令；
+            // 无关消息（如天气查询等普通请求）直接放行给普通对话/工具链路，
+            // 避免被"上一条学习路线已生成完毕"等提示错误拦截。
+            if (state.isFinished() && !isFinishedStateFollowUp(state, normalizedUserMessage)) {
+                return Optional.empty();
+            }
+            return Optional.of(resumeWorkflow(state, normalizedConversationId, normalizedUserMessage));
         }
 
         return Optional.ofNullable(startNewWorkflow(normalizedConversationId, normalizedUserMessage));
+    }
+
+    /**
+     * 已完成的工作流是否收到明确的后续指令。
+     * 只有这类消息才应恢复保留态工作流，其余消息一律放行。
+     */
+    private boolean isFinishedStateFollowUp(AgentState state, String userMessage) {
+        if (isCancelCommand(userMessage)) {
+            return true;
+        }
+        return switch (state.getTaskType()) {
+            // 技术路线：翻译成中文 / 新的学习主题
+            case TECH_ROADMAP -> AgentTextUtils.wantsChinese(userMessage)
+                    || AgentTextUtils.extractTopic(userMessage).isPresent();
+            // GitHub 仓库速读：回复目录名继续展开
+            case GITHUB_REPO_DIGEST -> AgentTextUtils.isDirectoryPath(userMessage);
+            default -> false;
+        };
     }
 
     /**
@@ -140,6 +165,16 @@ public class AgentLoopService {
 
         // 已完成的工作流收到无关消息：给出友好提示，避免误入 FINISH 阶段执行器
         if (state.isFinished()) {
+            // GitHub 仓库速读：回复目录名 → 继续展开目录分析
+            if (state.getTaskType() == AgentTaskType.GITHUB_REPO_DIGEST
+                    && AgentTextUtils.isDirectoryPath(userMessage)) {
+                state.updateLatestUserMessage(userMessage);
+                state.clearWaitingUserInput();
+                state.moveToPhase(AgentPhase.GITHUB_DIRECTORY_EXPAND);
+                log.info("conversationId={}, agentTaskType={}, workflowEvent=expand-directory",
+                        state.getConversationId(), state.getTaskType());
+                return runWorkflow(state);
+            }
             return "上一条学习路线已生成完毕。回复“翻译成中文”可切换为中文版，或发送新的“我想学 X”开始新路线。";
         }
 
@@ -167,9 +202,10 @@ public class AgentLoopService {
 
             if (result.finished()) {
                 state.markFinished(result.replyToUser());
-                // 技术路线完成后保留状态，以支持后续“翻译成中文”重渲染指令；
+                // 技术路线 / GitHub 仓库速读完成后保留状态，以支持后续"翻译成中文"、"目录展开"等指令；
                 // 其它工作流完成后即从存储中移除。
-                if (state.getTaskType() != AgentTaskType.TECH_ROADMAP) {
+                if (state.getTaskType() != AgentTaskType.TECH_ROADMAP
+                        && state.getTaskType() != AgentTaskType.GITHUB_REPO_DIGEST) {
                     agentStateStore.remove(state.getConversationId());
                 }
                 log.info("conversationId={}, agentTaskType={}, workflowEvent=finish, rounds={}",

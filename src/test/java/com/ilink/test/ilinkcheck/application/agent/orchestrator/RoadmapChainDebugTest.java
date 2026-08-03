@@ -9,6 +9,9 @@ import com.ilink.test.ilinkcheck.application.agent.orchestrator.model.AgentTaskT
 import com.ilink.test.ilinkcheck.application.agent.orchestrator.model.PhaseExecutor;
 import com.ilink.test.ilinkcheck.application.agent.orchestrator.phase.digest.DigestCollectSchedulePhaseExecutor;
 import com.ilink.test.ilinkcheck.application.agent.orchestrator.phase.digest.DigestComposePhaseExecutor;
+import com.ilink.test.ilinkcheck.application.agent.orchestrator.phase.github.GitHubCodeExplainPhaseExecutor;
+import com.ilink.test.ilinkcheck.application.agent.orchestrator.phase.github.GitHubDirectoryAnalyzePhaseExecutor;
+import com.ilink.test.ilinkcheck.application.agent.orchestrator.phase.github.GitHubDirectoryExpandPhaseExecutor;
 import com.ilink.test.ilinkcheck.application.agent.orchestrator.phase.github.GitHubFetchPhaseExecutor;
 import com.ilink.test.ilinkcheck.application.agent.orchestrator.phase.github.GitHubSummarizePhaseExecutor;
 import com.ilink.test.ilinkcheck.application.agent.orchestrator.phase.review.ReviewCollectDraftPhaseExecutor;
@@ -133,6 +136,12 @@ class RoadmapChainDebugTest {
         List<PhaseExecutor> executors = List.of(
                 new GitHubFetchPhaseExecutor(gitHubRepoProvider),
                 new GitHubSummarizePhaseExecutor(mockChatClient()),
+                new GitHubDirectoryAnalyzePhaseExecutor(
+                        new com.ilink.test.ilinkcheck.application.agent.feature.github.GitHubRepoDigestService(gitHubRepoProvider)),
+                new GitHubDirectoryExpandPhaseExecutor(
+                        new com.ilink.test.ilinkcheck.application.agent.feature.github.GitHubRepoDigestService(gitHubRepoProvider)),
+                new GitHubCodeExplainPhaseExecutor(
+                        new com.ilink.test.ilinkcheck.application.agent.feature.github.GitHubRepoDigestService(gitHubRepoProvider)),
                 new RoadmapFetchPhaseExecutor(devToArticleProvider, webSearchProvider),
                 new RoadmapComposePhaseExecutor(new RoadmapComposeService()),
                 new ReviewCollectDraftPhaseExecutor(),

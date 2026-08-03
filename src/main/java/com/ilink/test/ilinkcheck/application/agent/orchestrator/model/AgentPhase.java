@@ -7,6 +7,9 @@ package com.ilink.test.ilinkcheck.application.agent.orchestrator.model;
 public enum AgentPhase {
     GITHUB_FETCH,
     GITHUB_SUMMARIZE,
+    GITHUB_DIRECTORY_ANALYZE,
+    GITHUB_DIRECTORY_EXPAND,
+    GITHUB_CODE_EXPLAIN,
     ROADMAP_FETCH,
     ROADMAP_COMPOSE,
     REVIEW_CONFIRM,

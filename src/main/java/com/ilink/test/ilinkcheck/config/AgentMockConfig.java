@@ -1,6 +1,7 @@
 package com.ilink.test.ilinkcheck.config;
 
 import com.ilink.test.ilinkcheck.application.agent.dto.github.RepoInfo;
+import com.ilink.test.ilinkcheck.application.agent.dto.github.RepoTreeNode;
 import com.ilink.test.ilinkcheck.application.agent.dto.github.TrendingRepo;
 import com.ilink.test.ilinkcheck.application.agent.dto.review.ReviewSuggestion;
 import com.ilink.test.ilinkcheck.application.agent.dto.roadmap.DevToArticle;
@@ -65,6 +66,26 @@ public class AgentMockConfig {
                                 TrendingRepo.Source.MOCK
                         )
                 );
+            }
+
+            @Override
+            public List<RepoTreeNode> fetchDirectoryTree(String owner, String repo, String path) {
+                if (path == null || path.isBlank()) {
+                    return List.of(
+                            new RepoTreeNode("src", "src", "dir", 0, "mock-src"),
+                            new RepoTreeNode("docs", "docs", "dir", 0, "mock-docs"),
+                            new RepoTreeNode("tests", "tests", "dir", 0, "mock-tests"),
+                            new RepoTreeNode("README.md", "README.md", "file", 1024, "mock-readme"),
+                            new RepoTreeNode("pom.xml", "pom.xml", "file", 4096, "mock-pom")
+                    );
+                }
+                if ("src".equalsIgnoreCase(path)) {
+                    return List.of(
+                            new RepoTreeNode("main", "src/main", "dir", 0, "mock-src-main"),
+                            new RepoTreeNode("main/java", "src/main/java", "dir", 0, "mock-src-main-java")
+                    );
+                }
+                return List.of();
             }
         };
     }
